@@ -8,10 +8,10 @@ from decimal import Decimal
 
 import yaml
 
-from bilibili import BilibiliFetcher
-from conditions import check_condition
-from notifier import send_price_alert
-from storage import PriceStorage
+from src.bilibili import BilibiliFetcher
+from src.conditions import check_condition
+from src.notifier import send_price_alert
+from src.storage import PriceStorage
 
 
 CONFIG_FILE = Path(
@@ -53,6 +53,7 @@ def main():
         "",
     )
 
+    failures = []
     for product in config.get(
         "products",
         [],
@@ -141,6 +142,11 @@ def main():
             print(
                 f"ERROR: 商品检查失败：{exc}"
             )
+            failures.append(f"{product['name']}: {exc}")
+
+    if failures:
+        # 让 GitHub Actions 明确标红，避免错误被误认为成功的价格检查。
+        raise RuntimeError("以下商品无法完成可靠价格检查：" + "；".join(failures))
 
 
 if __name__ == "__main__":
