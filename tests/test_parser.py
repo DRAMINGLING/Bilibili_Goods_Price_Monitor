@@ -31,11 +31,6 @@ def test_parse_sale_price() -> None:
     """salePrice 是转售详情响应的优先价格字段。"""
     assert BilibiliFetcher._parse_price({"salePrice": "42.50", "price": "99"}) == Decimal("42.50")
 
-
-    price = BilibiliFetcher._extract_price(html)
-
-    assert price == Decimal("39.90")
-
 def test_fetch_uses_cluster_id_with_public_detail_request() -> None:
     """获取器必须把页面 clusterId 传给公开详情请求。"""
     session = _Session()
