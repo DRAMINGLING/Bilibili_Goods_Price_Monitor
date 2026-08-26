@@ -37,7 +37,7 @@ products:
     # 该转售商品的公开详情接口已返回 404，无法可靠取得价格。保留
     # 原配置以便在获得新的有效会员购链接后更新，并在此之前不让
     # 定时任务把“未检查”误报为“检查成功”。
-    enabled: false
+    enabled: true
 
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1"
 
