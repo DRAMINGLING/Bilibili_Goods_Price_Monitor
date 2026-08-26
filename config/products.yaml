@@ -98,6 +98,6 @@ products:
     cluster_id: "10000009511"
     condition:
       type: "lte"
-      price: 110
+      price: 80
     price_type: "displayed"
     cooldown_hours: 24
