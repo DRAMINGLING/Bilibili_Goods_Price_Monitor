@@ -62,7 +62,7 @@ products:
     # 每次 GitHub Actions 运行都重复发送邮件。
     cooldown_hours: 24
 
-- name: "Bilibili 会员购商品 小司"
+  - name: "Bilibili 会员购商品 小司"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
     cluster_id: "10000001234"
@@ -72,7 +72,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 24
 
-- name: "Bilibili 会员购商品 唯"
+  - name: "Bilibili 会员购商品 唯"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
     cluster_id: "10000000940"
@@ -82,7 +82,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 24
 
-- name: "Bilibili 会员购商品 阿梓喵"
+  - name: "Bilibili 会员购商品 阿梓喵"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
     cluster_id: "10000001118"
@@ -92,7 +92,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 24
 
-- name: "Bilibili 会员购商品 波奇"
+  - name: "Bilibili 会员购商品 波奇"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
     cluster_id: "10000009511"
