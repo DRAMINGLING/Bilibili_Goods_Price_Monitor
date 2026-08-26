@@ -4,13 +4,13 @@
 
 ## 当前监控项
 
-* 商品簇：`10000008690`
+* 商品簇：`10000008690`。
 * 条件：价格小于或等于 `45` 元。
 * 提醒邮箱：当前留空，因此命中条件时只会记录日志，不会发邮件。
 
 ## 工作方式与边界
 
-`BilibiliFetcher` 使用转售详情页以 `clusterId` 调用的公开 JSON 详情请求，而非从动态 HTML 中猜测金额。若接口要求登录、验证码、拒绝访问，或响应不含明确的 `salePrice` / `price`，程序会失败并把原因显示在 Actions 日志中；项目不会尝试绕过这些限制。
+`BilibiliFetcher` 使用市集公开 JSON 详情接口 `mall-search-items/items_detail/cluster_info`，以 `clusterId` 作为参数读取 `data.clusterPriceFloorVO.priceTag.firstPrice`，而非从动态 HTML 中猜测金额。若接口要求登录、验证码、拒绝访问，或响应不含该明确最低价字段，程序会失败并把原因显示在 Actions 日志中；项目不会尝试绕过这些限制。
 
 价格记录存放在 SQLite 数据库 `data/prices.db`。工作流在成功查询后提交该数据库，使历史记录可在后续定时运行中保留。
 
