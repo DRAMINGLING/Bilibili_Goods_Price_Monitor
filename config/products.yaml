@@ -32,7 +32,7 @@ products:
   # ----------------------------------------------------------
   # 你提供的 Bilibili 会员购商品
   # ----------------------------------------------------------
-  - name: "Bilibili 会员购商品 10000008690"
+  - name: "Bilibili 会员购商品 澄闪"
 
     # 使用 clusterId 调用公开商品详情接口查询当前最低价。
     enabled: true
@@ -60,4 +60,44 @@ products:
 
     # 防止同一个商品在达到目标价格后，
     # 每次 GitHub Actions 运行都重复发送邮件。
+    cooldown_hours: 24
+
+- name: "Bilibili 会员购商品 小司"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
+    cluster_id: "10000001234"
+    condition:
+      type: "lte"
+      price: 45
+    price_type: "displayed"
+    cooldown_hours: 24
+
+- name: "Bilibili 会员购商品 唯"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
+    cluster_id: "10000000940"
+    condition:
+      type: "lte"
+      price: 55
+    price_type: "displayed"
+    cooldown_hours: 24
+
+- name: "Bilibili 会员购商品 阿梓喵"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
+    cluster_id: "10000001118"
+    condition:
+      type: "lte"
+      price: 55
+    price_type: "displayed"
+    cooldown_hours: 24
+
+- name: "Bilibili 会员购商品 波奇"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
+    cluster_id: "10000009511"
+    condition:
+      type: "lte"
+      price: 70
+    price_type: "displayed"
     cooldown_hours: 24
