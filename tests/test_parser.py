@@ -42,8 +42,8 @@ class _Session:
         self.response = response
         self.request: tuple[str, dict, int] | None = None
 
-    def get(self, url: str, *, params: dict, timeout: int) -> _Response:
-        self.request = (url, params, timeout)
+    def post(self, url: str, *, json: dict, timeout: int) -> _Response:
+        self.request = (url, json, timeout)
         return self.response
 
 
@@ -59,6 +59,11 @@ def test_parse_decimal_price_and_threshold_comparison() -> None:
     assert price <= Decimal("45")
 
 
+def test_parse_price_below_threshold() -> None:
+    """低于阈值的价格应保留精确的小数值。"""
+    assert BilibiliFetcher._parse_price(_payload("44.99")) == Decimal("44.99")
+
+
 @pytest.mark.parametrize(
     ("payload", "message"),
     [
@@ -67,6 +72,7 @@ def test_parse_decimal_price_and_threshold_comparison() -> None:
         (_payload("not-a-price"), "格式无效"),
         ({"code": 0}, "data 对象"),
         ({"code": 0, "data": {}}, "clusterPriceFloorVO"),
+        ({"code": 0, "data": {"clusterPriceFloorVO": {}}}, "priceTag"),
     ],
 )
 def test_parse_price_rejects_missing_or_invalid_fields(payload: dict, message: str) -> None:
@@ -75,15 +81,15 @@ def test_parse_price_rejects_missing_or_invalid_fields(payload: dict, message: s
         BilibiliFetcher._parse_price(payload)
 
 
-def test_fetch_uses_cluster_info_api() -> None:
-    """获取器必须将链接中的 clusterId 传给新的市集详情接口。"""
+def test_fetch_posts_cluster_id_to_cluster_info_api() -> None:
+    """获取器必须 POST 整数 clusterId JSON 请求体到新详情接口。"""
     session = _Session(_Response(_payload("45.00")))
     info = BilibiliFetcher(session=session).fetch(
         "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690"
     )
     assert session.request == (
         BilibiliFetcher.DETAIL_API,
-        {"clusterId": "10000008690"},
+        {"clusterId": 10000008690},
         BilibiliFetcher.REQUEST_TIMEOUT,
     )
     assert info.price == Decimal("45.00")
