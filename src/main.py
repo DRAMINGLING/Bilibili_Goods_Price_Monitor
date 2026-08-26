@@ -59,6 +59,14 @@ def main():
         [],
     ):
 
+        # 已下架的商品链接会使会员购接口返回 404。跳过明确禁用的
+        # 配置项，避免把一个已知无法查询的商品误报为本次检查失败。
+        # 未设置时仍默认启用，以免静默停止已有监控项。
+        if not product.get("enabled", True):
+            print("=" * 60)
+            print(f"跳过已禁用商品：{product['name']}")
+            continue
+
         print("=" * 60)
 
         print(
