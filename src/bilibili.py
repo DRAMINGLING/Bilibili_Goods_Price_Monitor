@@ -25,17 +25,15 @@ class BilibiliFetcher:
     """
     通过市集公开 JSON 接口获取商品最低价格。
 
-    ``clusterId`` 从商品链接中取得，并作为请求参数传给详情接口。本类不
+    ``clusterId`` 从商品链接中取得，并作为 JSON 请求体传给详情接口。本类不
     解析 HTML，也不使用登录状态、Cookie 或反爬绕过手段。
     """
 
     DETAIL_API = "https://mall.bilibili.com/mall-search-items/items_detail/cluster_info"
-    USER_AGENT = "BilibiliPriceMonitor/1.0 (+https://github.com/)"
     REQUEST_TIMEOUT = 15
 
     def __init__(self, session: requests.Session | None = None) -> None:
         self.session = session or requests.Session()
-        self.session.headers.update({"User-Agent": self.USER_AGENT, "Accept": "application/json"})
 
     @staticmethod
     def extract_cluster_id(url: str) -> str:
@@ -50,9 +48,9 @@ class BilibiliFetcher:
         """请求 ``cluster_info`` 并返回该商品的最低价。"""
 
         try:
-            response = self.session.get(
+            response = self.session.post(
                 self.DETAIL_API,
-                params={"clusterId": cluster_id},
+                json={"clusterId": int(cluster_id)},
                 timeout=self.REQUEST_TIMEOUT,
             )
             response.raise_for_status()
