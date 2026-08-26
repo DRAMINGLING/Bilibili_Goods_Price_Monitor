@@ -1,138 +1,61 @@
-"""
-Bilibili 商品价格解析测试。
-
-这些测试用于确保价格解析器不会因为简单的页面结构变化
-而立即失效。
-
-注意：
-目前 Bilibili 会员购页面的真实 API 返回结构仍需要进一步确认。
-因此这里测试的是 parser 本身，而不是假定某个未经验证的 API。
-"""
+"""Bilibili 公开转售详情接口的价格解析测试。"""
 
 from decimal import Decimal
 
-from src.bilibili import BilibiliFetcher
+import pytest
 
+from src.bilibili import BilibiliFetchError, BilibiliFetcher
 
-def test_extract_price_from_string_json():
-    """测试 JSON 中 price 为字符串的情况。"""
+class _Response:
+    """用于验证公开请求参数的最小响应替身。"""
 
-    html = """
-    <script>
-    {
-        "price": "42.50"
-    }
-    </script>
-    """
+    def raise_for_status(self) -> None:
+        """模拟成功的 HTTP 响应。"""
 
-    price = BilibiliFetcher._extract_price(html)
+    def json(self) -> dict:
+        """返回代表公开接口的固定数据。"""
+        return {"code": 0, "data": {"title": "测试商品", "salePrice": "45.00"}}
 
-    assert price == Decimal("42.50")
+class _Session:
+    """记录请求而不实际连接网络。"""
 
+    def __init__(self) -> None:
+        self.headers: dict[str, str] = {}
+        self.request: tuple[str, dict, int] | None = None
 
-def test_extract_price_from_numeric_json():
-    """测试 JSON 中 price 为数字的情况。"""
+    def get(self, url: str, *, params: dict, timeout: int) -> _Response:
+        self.request = (url, params, timeout)
+        return _Response()
 
-    html = """
-    <script>
-    {
-        "price": 43.99
-    }
-    </script>
-    """
+def test_parse_sale_price() -> None:
+    """salePrice 是转售详情响应的优先价格字段。"""
+    assert BilibiliFetcher._parse_price({"salePrice": "42.50", "price": "99"}) == Decimal("42.50")
 
-    price = BilibiliFetcher._extract_price(html)
-
-    assert price == Decimal("43.99")
-
-
-def test_extract_sale_price():
-    """测试 salePrice 字段。"""
-
-    html = """
-    <script>
-    {
-        "salePrice": "39.90"
-    }
-    </script>
-    """
 
     price = BilibiliFetcher._extract_price(html)
 
     assert price == Decimal("39.90")
 
-
-def test_extract_current_price():
-    """测试 currentPrice 字段。"""
-
-    html = """
-    <script>
-    {
-        "currentPrice": 44.00
-    }
-    </script>
-    """
-
-    price = BilibiliFetcher._extract_price(html)
-
-    assert price == Decimal("44.00")
-
-
-def test_extract_multiple_prices_uses_lowest_candidate():
-    """
-    当前 fallback parser 的行为：
-
-    如果页面中出现多个候选价格，
-    暂时选择最小值。
-
-    这只是 fallback 行为。
-
-    一旦确认 Bilibili 官方/公开接口的真实字段，
-    应修改 parser，使其精确选择商品实际售价，
-    而不是简单取最小值。
-    """
-
-    html = """
-    <script>
-    {
-        "originalPrice": "59.90",
-        "price": "45.00",
-        "salePrice": "42.00"
-    }
-    </script>
-    """
-
-    price = BilibiliFetcher._extract_price(html)
-
-    assert price == Decimal("42.00")
-
-
-def test_extract_price_returns_none_when_missing():
-    """没有价格字段时应该返回 None，而不是猜测价格。"""
-
-    html = """
-    <script>
-    {
-        "name": "某个商品",
-        "description": "没有价格信息"
-    }
-    </script>
-    """
-
-    price = BilibiliFetcher._extract_price(html)
-
-    assert price is None
-
-
-def test_extract_cluster_id():
-    """测试从你提供的 URL 中解析 clusterId。"""
-
-    url = (
-        "https://mall.bilibili.com/"
-        "neul-next/resell/detail.html"
-        "?clusterId=10000008690&noTitleBar=1"
+def test_fetch_uses_cluster_id_with_public_detail_request() -> None:
+    """获取器必须把页面 clusterId 传给公开详情请求。"""
+    session = _Session()
+    info = BilibiliFetcher(session=session).fetch(
+        "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690"
     )
+    assert session.request == (BilibiliFetcher.DETAIL_API, {"clusterId": "10000008690"}, 30)
+    assert info.name == "测试商品"
+    assert info.price == Decimal("45.00")
 
-    cluster_id = BilibiliFetcher.extract_cluster_id(url)
+def test_parse_numeric_price() -> None:
+    """接口也可以将价格编码为 JSON 数字。"""
+    assert BilibiliFetcher._parse_price({"price": 43.99}) == Decimal("43.99")
 
-    assert cluster_id == "10000008690"
+def test_missing_price_raises_instead_of_guessing() -> None:
+    """没有明确价格字段必须失败，不能从其他数字推断。"""
+    with pytest.raises(BilibiliFetchError, match="没有 salePrice/price"):
+        BilibiliFetcher._parse_price({"stock": 1, "originalPrice": "59.90"})
+
+def test_extract_cluster_id() -> None:
+    """可以从指定的商品链接解析商品簇标识。"""
+    assert BilibiliFetcher.extract_cluster_id("https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1") == "10000008690"
+    
