@@ -23,7 +23,7 @@ email:
 
   # SMTP 配置不要写密码到这个文件。
   # 实际使用时通过 GitHub Secrets 提供。
-  smtp_host: ""
+  smtp_host: "smtp.qq.com"
   smtp_port: 465
   smtp_user: "3507624840@qq.com"
 
