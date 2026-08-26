@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import re
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -20,6 +21,39 @@ class ProductInfo:
 
 class BilibiliFetchError(RuntimeError):
     """公开接口不可用或其响应不能可靠地表示价格时抛出。"""
+
+
+_DIAGNOSTIC_RESPONSE_HEADERS = {
+    "content-type",
+    "date",
+    "retry-after",
+    "server",
+    "via",
+    "x-b3-traceid",
+    "x-request-id",
+    "x-trace-id",
+}
+_SENSITIVE_BODY_FIELD = re.compile(
+    r'(?i)("?(?:cookie|set-cookie|authorization|sessdata|bili_jct|dedeuserid|sid|bili_ticket|token|csrf|session|password|secret)[^:=\"]*"?\s*[:=]\s*)("[^"]*"|[^,}\]&\s]+)'
+)
+
+
+def safe_response_body(response: requests.Response) -> str:
+    """返回可写入日志的响应文本摘要，不暴露身份凭证或令牌。"""
+
+    body = response.text[:1000]
+    return _SENSITIVE_BODY_FIELD.sub(r"\1[REDACTED]", body)
+
+
+def safe_response_headers(response: requests.Response) -> dict[str, str]:
+    """仅保留允许出现在诊断日志中的非敏感响应头。"""
+
+    return {
+        name: value
+        for name, value in response.headers.items()
+        if name.lower() in _DIAGNOSTIC_RESPONSE_HEADERS
+    }
+
 
 class BilibiliFetcher:
     """
@@ -50,13 +84,23 @@ class BilibiliFetcher:
         try:
             response = self.session.post(
                 self.DETAIL_API,
+                headers=self._headers(cluster_id),
                 json={"clusterId": int(cluster_id)},
                 timeout=self.REQUEST_TIMEOUT,
             )
-            response.raise_for_status()
-            payload = response.json()
         except requests.RequestException as exc:
             raise BilibiliFetchError(f"请求 Bilibili 市集商品详情接口失败：{exc}") from exc
+
+        if not response.ok:
+            raise BilibiliFetchError(
+                "Bilibili 市集商品详情接口 HTTP 请求失败："
+                f"status={response.status_code}，"
+                f"headers={safe_response_headers(response)!r}，"
+                f"body={safe_response_body(response)!r}"
+            )
+
+        try:
+            payload = response.json()
         except ValueError as exc:
             raise BilibiliFetchError("Bilibili 市集商品详情接口没有返回合法 JSON，无法可靠取得价格。") from exc
 
@@ -68,6 +112,26 @@ class BilibiliFetcher:
                 f"code={payload.get('code')}，message={payload.get('message') or ''}"
             )
         return self._parse_price(payload)
+
+    @staticmethod
+    def _headers(cluster_id: str) -> dict[str, str]:
+        """构造无需登录凭证的最小浏览器兼容请求头。"""
+
+        return {
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+            "Origin": "https://mall.bilibili.com",
+            "Referer": (
+                "https://mall.bilibili.com/"
+                "neul-next/resell/detail.html"
+                f"?clusterId={cluster_id}&noTitleBar=1"
+            ),
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0"
+            ),
+        }
 
     def fetch(self, url: str) -> ProductInfo:
         """从商品链接提取标识、请求详情并构造监控所需商品资料。"""

@@ -5,7 +5,12 @@ from decimal import Decimal
 import pytest
 import requests
 
-from src.bilibili import BilibiliFetchError, BilibiliFetcher
+from src.bilibili import (
+    BilibiliFetchError,
+    BilibiliFetcher,
+    safe_response_body,
+    safe_response_headers,
+)
 
 
 def _payload(first_price: object = "55.50") -> dict:
@@ -20,9 +25,24 @@ def _payload(first_price: object = "55.50") -> dict:
 class _Response:
     """用于验证公开请求参数的最小响应替身。"""
 
-    def __init__(self, payload: object, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        payload: object,
+        error: Exception | None = None,
+        *,
+        status_code: int = 200,
+        text: str = "",
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.payload = payload
         self.error = error
+        self.status_code = status_code
+        self.text = text
+        self.headers = headers or {}
+
+    @property
+    def ok(self) -> bool:
+        return 200 <= self.status_code < 300
 
     def raise_for_status(self) -> None:
         if self.error:
@@ -40,10 +60,10 @@ class _Session:
     def __init__(self, response: _Response) -> None:
         self.headers: dict[str, str] = {}
         self.response = response
-        self.request: tuple[str, dict, int] | None = None
+        self.request: tuple[str, dict, dict, int] | None = None
 
-    def post(self, url: str, *, json: dict, timeout: int) -> _Response:
-        self.request = (url, json, timeout)
+    def post(self, url: str, *, headers: dict, json: dict, timeout: int) -> _Response:
+        self.request = (url, headers, json, timeout)
         return self.response
 
 
@@ -89,6 +109,20 @@ def test_fetch_posts_cluster_id_to_cluster_info_api() -> None:
     )
     assert session.request == (
         BilibiliFetcher.DETAIL_API,
+        {
+            "Accept": "*/*",
+            "Content-Type": "application/json",
+            "Origin": "https://mall.bilibili.com",
+            "Referer": (
+                "https://mall.bilibili.com/"
+                "neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1"
+            ),
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0"
+            ),
+        },
         {"clusterId": 10000008690},
         BilibiliFetcher.REQUEST_TIMEOUT,
     )
@@ -103,10 +137,31 @@ def test_get_price_rejects_api_error() -> None:
 
 
 def test_get_price_wraps_http_error() -> None:
-    """非 2xx 响应必须转换为清晰的领域异常。"""
-    response = _Response({}, requests.HTTPError("404 Client Error"))
-    with pytest.raises(BilibiliFetchError, match="请求 Bilibili 市集商品详情接口失败"):
+    """非 2xx 响应必须输出过滤后的诊断信息。"""
+    response = _Response(
+        {},
+        status_code=412,
+        text='{"message":"risk", "SESSDATA":"private"}',
+        headers={"Server": "nginx", "Set-Cookie": "private", "X-Request-ID": "abc"},
+    )
+    with pytest.raises(
+        BilibiliFetchError,
+        match="status=412.*Server.*X-Request-ID.*REDACTED",
+    ):
         BilibiliFetcher(session=_Session(response)).get_price("10000008690")
+
+
+def test_response_diagnostics_exclude_sensitive_headers_and_body_values() -> None:
+    """诊断信息只能包含允许的响应头，并且必须掩码敏感字段。"""
+    response = _Response(
+        {},
+        text='Authorization=Bearer-secret&token=abc&message=risk',
+        headers={"Content-Type": "application/json", "Cookie": "secret", "Set-Cookie": "secret"},
+    )
+    assert safe_response_headers(response) == {"Content-Type": "application/json"}
+    assert safe_response_body(response) == (
+        "Authorization=[REDACTED]&token=[REDACTED]&message=risk"
+    )
 
 
 def test_get_price_rejects_invalid_json() -> None:
