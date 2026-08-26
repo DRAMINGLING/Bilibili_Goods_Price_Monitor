@@ -1,38 +1,16 @@
-"""
-Bilibili 会员购商品价格获取器。
+"""Bilibili 会员购转售商品的公开详情请求及响应解析。"""
 
-重要说明：
-
-Bilibili 会员购页面是动态页面。
-因此不能简单地假设：
-
-    requests.get(url).text
-
-里面一定直接包含商品价格。
-
-本模块故意把：
-    1. 页面请求
-    2. API 请求
-    3. JSON 解析
-    4. 价格解析
-
-分开。
-
-以后如果 Bilibili 修改接口，只需要修改这个文件。
-"""
-
-import re
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
 
-@dataclass
+@dataclass(frozen=True)
 class ProductInfo:
-    """统一的商品信息结构。"""
+    """一次成功查询得到的、可用于监控的商品资料。"""
 
     cluster_id: str
     name: str
@@ -40,156 +18,76 @@ class ProductInfo:
     url: str
 
 
+class BilibiliFetchError(RuntimeError):
+    """公开接口不可用或其响应不能可靠地表示价格时抛出。"""
+
 class BilibiliFetcher:
+    """
+    通过转售详情页使用的公开 JSON 请求获取商品价格。
+    分析方式：该页面的 ``clusterId`` 是转售商品簇标识，而不是普通
+    ``itemsId``。页面会以它作为 ``clusterId`` 参数调用下面的公开详情接口。
+    因此这里不解析易变的 HTML，也不尝试登录、验证码或反爬绕过。
+    """
 
-    USER_AGENT = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 "
-        "(KHTML, like Gecko) "
-        "Chrome/139.0 Safari/537.36"
-    )
+    DETAIL_API = "https://mall.bilibili.com/mall-c-resell/resell/cluster/detail"
+    USER_AGENT = "BilibiliPriceMonitor/1.0 (+https://github.com/)"
 
-    def __init__(self):
-        self.session = requests.Session()
-
-        self.session.headers.update(
-            {
-                "User-Agent": self.USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml,"
-                "application/xml;q=0.9,*/*;q=0.8",
-                "Accept-Language": "zh-CN,zh;q=0.9",
-            }
-        )
+    def __init__(self, session: requests.Session | None = None) -> None:
+        self.session = session or requests.Session()
+        self.session.headers.update({"User-Agent": self.USER_AGENT, "Accept": "application/json"})
 
     @staticmethod
     def extract_cluster_id(url: str) -> str:
-        """从会员购 URL 中提取 clusterId。"""
+        """从用户提供的详情链接提取非空 ``clusterId``。"""
 
-        parsed = urlparse(url)
-
-        query = parse_qs(parsed.query)
-
-        cluster_ids = query.get("clusterId")
-
-        if not cluster_ids:
-            raise ValueError(
-                "URL 中没有找到 clusterId"
-            )
-
-        return cluster_ids[0]
+        cluster_id = parse_qs(urlparse(url).query).get("clusterId", [""])[0]
+        if not cluster_id:
+            raise ValueError("商品 URL 中没有有效的 clusterId 参数。")
+        return cluster_id
 
     def fetch(self, url: str) -> ProductInfo:
-        """
-        获取商品信息。
-
-        当前实现首先请求页面，然后尝试从页面中的
-        JSON / HTML 中寻找价格。
-
-        如果 Bilibili 当前页面结构无法通过这种方式获取，
-        会明确抛出异常，而不是返回一个错误价格。
-        """
+        """请求公开详情接口；接口拒绝访问时保留其原因并明确失败。"""
 
         cluster_id = self.extract_cluster_id(url)
 
-        response = self.session.get(
-            url,
-            timeout=30,
-        )
+        try:
+            response = self.session.get(self.DETAIL_API, params={"clusterId": cluster_id}, timeout=30)
+            response.raise_for_status()
+            payload = response.json()
+        except requests.RequestException as exc:
+            raise BilibiliFetchError(f"请求 Bilibili 公开转售详情接口失败：{exc}") from exc
+        except ValueError as exc:
+            raise BilibiliFetchError("Bilibili 公开转售详情接口没有返回 JSON，无法可靠取得价格。") from exc
 
-        response.raise_for_status()
+        if payload.get("code") not in (0, None):
+            raise BilibiliFetchError(f"Bilibili 公开接口返回错误：code={payload.get('code')}，message={payload.get('message', '')}")
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            raise BilibiliFetchError("Bilibili 公开接口响应缺少 data 对象，无法可靠取得价格。")
+        return ProductInfo(cluster_id=cluster_id, name=self._parse_name(data), price=self._parse_price(data), url=url)
 
-        html = response.text
+    @staticmethod
+    def _parse_name(data: dict[str, Any]) -> str:
+        """只读取详情响应中明确的商品名称字段。"""
 
-        price = self._extract_price(html)
+        for key in ("title", "name", "goodsName"):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return "Bilibili 会员购转售商品"
 
+    @staticmethod
+    def _parse_price(data: dict[str, Any]) -> Decimal:
+        """解析详情响应的实际转售价；字段缺失或歧义时绝不猜测。"""
+
+        price = data.get("salePrice", data.get("price"))
         if price is None:
-            raise RuntimeError(
-                "无法从 Bilibili 页面获取商品价格。"
-                "该页面可能需要进一步分析其动态 API。"
-            )
-
-        name = self._extract_name(html)
-
-        return ProductInfo(
-            cluster_id=cluster_id,
-            name=name,
-            price=price,
-            url=url,
-        )
-
-    @staticmethod
-    def _extract_name(html: str) -> str:
-        """尽可能从 HTML 中获取商品名称。"""
-
-        patterns = [
-            r'"title"\s*:\s*"([^"]+)"',
-            r'"name"\s*:\s*"([^"]+)"',
-        ]
-
-        for pattern in patterns:
-            match = re.search(
-                pattern,
-                html,
-                re.IGNORECASE,
-            )
-
-            if match:
-                return match.group(1)
-
-        return "Bilibili 会员购商品"
-
-    @staticmethod
-    def _extract_price(html: str):
-        """
-        从页面数据中寻找价格。
-
-        注意：
-        这是一个保守的 fallback parser。
-
-        如果页面中的价格由 JavaScript/API 动态获取，
-        这个函数可能无法找到价格。
-
-        此时程序应该报错，而不是猜测。
-        """
-
-        patterns = [
-            # 常见 JSON 字段
-            r'"price"\s*:\s*"(\d+(?:\.\d+)?)"',
-            r'"price"\s*:\s*(\d+(?:\.\d+)?)',
-
-            # 一些可能出现的金额字段
-            r'"salePrice"\s*:\s*"(\d+(?:\.\d+)?)"',
-            r'"salePrice"\s*:\s*(\d+(?:\.\d+)?)',
-
-            r'"currentPrice"\s*:\s*"(\d+(?:\.\d+)?)"',
-            r'"currentPrice"\s*:\s*(\d+(?:\.\d+)?)',
-        ]
-
-        candidates = []
-
-        for pattern in patterns:
-            for match in re.finditer(
-                pattern,
-                html,
-                re.IGNORECASE,
-            ):
-                try:
-                    value = Decimal(match.group(1))
-
-                    # 排除明显不合理的数值。
-                    if value >= 0:
-                        candidates.append(value)
-
-                except Exception:
-                    continue
-
-        if not candidates:
-            return None
-
-        # 暂时选择最小候选价格。
-        #
-        # 注意：
-        # 这不是最终解析策略。
-        # 后续应该根据 Bilibili 实际 API 返回结构，
-        # 精确定位 salePrice / price 字段。
-        return min(candidates)
+            raise BilibiliFetchError("Bilibili 公开接口响应没有 salePrice/price 字段，无法可靠取得价格。")
+        try:
+            parsed = Decimal(str(price))
+        except (InvalidOperation, ValueError) as exc:
+            raise BilibiliFetchError(f"Bilibili 公开接口价格格式无效：{price!r}") from exc
+        if not parsed.is_finite() or parsed < 0:
+            raise BilibiliFetchError(f"Bilibili 公开接口价格不合法：{price!r}")
+        return parsed
+       
