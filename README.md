@@ -4,13 +4,12 @@
 
 ## 当前监控项
 
-* 商品簇：`10000008690`（当前已禁用：其公开转售详情接口返回 404）。
 * 条件：价格小于或等于 `45` 元。
 * 提醒邮箱：当前留空，因此命中条件时只会记录日志，不会发邮件。
 
 ## 工作方式与边界
 
-`BilibiliFetcher` 使用转售详情页以 `clusterId` 调用的公开 JSON 详情请求，而非从动态 HTML 中猜测金额。若接口要求登录、验证码、拒绝访问，或响应不含明确的 `salePrice` / `price`，程序会失败并把原因显示在 Actions 日志中；项目不会尝试绕过这些限制。
+`BilibiliFetcher` 使用市集公开 JSON 详情接口 `mall-search-items/items_detail/cluster_info`，以 `clusterId` 作为参数读取 `data.clusterPriceFloorVO.priceTag.firstPrice`，而非从动态 HTML 中猜测金额。若接口要求登录、验证码、拒绝访问，或响应不含该明确最低价字段，程序会失败并把原因显示在 Actions 日志中；项目不会尝试绕过这些限制。
 
 可在任意商品配置中设置 `enabled: false`，临时停用已经下架或接口不再可用的商品。被停用的商品会在日志中明确显示为“跳过”，不会被视为一次成功的价格检查。取得新的有效商品链接后，更新 `url`、`cluster_id` 并删除（或改为 `true`）该字段即可重新启用。
 
