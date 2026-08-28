@@ -18,10 +18,8 @@ env/
 # Local database
 data/*.db
 
-# Generated price history and GitHub Pages assets are intentionally versioned.
+# The canonical price history is intentionally versioned.
 !data/price_history.json
-!docs/index.html
-!docs/price_history.json
 
 # Secrets / environment variables
 .env

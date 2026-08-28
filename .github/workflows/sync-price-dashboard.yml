@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # workflow_run.head_sha predates the history commit made by that run;
           # the branch tip contains the committed JSON after successful completion.
@@ -34,7 +34,7 @@ jobs:
           fetch-depth: 1
 
       - name: Checkout GitHub Pages repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ env.TARGET_REPOSITORY }}
           ref: ${{ env.TARGET_BRANCH }}
@@ -47,16 +47,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          git fetch origin "${TARGET_BRANCH}"
           git pull --rebase origin "${TARGET_BRANCH}"
 
-      - name: Prepare dashboard files
+      - name: Copy price history only
         shell: bash
         run: |
           set -euo pipefail
-          destination="pages-repo/${TARGET_DIRECTORY}"
+          destination="pages-repo/${TARGET_DIRECTORY}/data"
           mkdir -p "${destination}"
-          cp docs/index.html "${destination}/index.html"
-          cp docs/price_history.json "${destination}/price_history.json"
+          # The Pages repository owns its HTML; this workflow publishes data only.
+          cp "data/price_history.json" "${destination}/price_history.json"
 
       - name: Commit dashboard update
         id: commit
@@ -66,11 +67,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- "${TARGET_DIRECTORY}/index.html" "${TARGET_DIRECTORY}/price_history.json"
+          git add -- "${TARGET_DIRECTORY}/data/price_history.json"
           if git diff --cached --quiet; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
-            git commit -m "chore: update Bilibili price dashboard"
+            git commit -m "chore: update Bilibili price history"
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
 

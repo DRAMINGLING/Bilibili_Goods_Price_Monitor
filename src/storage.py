@@ -12,7 +12,8 @@ from typing import Iterable, Literal, TypedDict
 from zoneinfo import ZoneInfo
 
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
-HISTORY_FILE = Path("data/price_history.json")
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+HISTORY_FILE = DATA_DIR / "price_history.json"
 Granularity = Literal["hour", "day"]
 Metric = Literal["max", "min", "average"]
 
@@ -187,8 +188,10 @@ def aggregate_price_history(records: Iterable[PriceRecord], granularity: Granula
 
 class PriceStorage:
     """Compatibility façade retained for callers of the former storage class."""
-    def __init__(self, database_path: str = "data/prices.db") -> None:
-        self.history_path = Path(database_path).with_name("price_history.json")
+    def __init__(self) -> None:
+        # All callers share one canonical file; never derive another history
+        # location from the current working directory or a database path.
+        self.history_path = HISTORY_FILE
 
     def add_price(self, cluster_id: str, price: Decimal, url: str = "", *, product_type: str = "resell", product_name: str = "") -> None:
         records = append_price_record(load_price_history(self.history_path), cluster_id=cluster_id, price=price, url=url, product_type=product_type, product_name=product_name)
