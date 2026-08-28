@@ -22,6 +22,9 @@ class PriceRecord(TypedDict):
     price: float
     cluster_id: str
     url: str
+    product_id: str
+    product_type: str
+    product_name: str
 
 
 class AggregatePoint(TypedDict):
@@ -51,11 +54,21 @@ def _normalise_record(record: object) -> PriceRecord | None:
         price = float(Decimal(str(record["price"])))
     except (KeyError, TypeError, ValueError, ArithmeticError):
         return None
+    # Existing JSON already contains the stable Bilibili clusterId.  It can be
+    # migrated without guessing; records with neither identity are unsafe and
+    # are deliberately ignored rather than attributed to an arbitrary product.
+    product_id = str(record.get("product_id") or record.get("cluster_id") or "")
+    if not product_id:
+        return None
+    product_type = str(record.get("product_type") or "resell")
     return {
         "timestamp": timestamp.isoformat(),
         "price": price,
         "cluster_id": str(record.get("cluster_id", "")),
         "url": str(record.get("url", "")),
+        "product_id": product_id,
+        "product_type": product_type,
+        "product_name": str(record.get("product_name", "")),
     }
 
 
@@ -77,13 +90,14 @@ def _load_legacy_sqlite(path: Path) -> list[PriceRecord]:
 
 def merge_price_records(*groups: Iterable[PriceRecord]) -> list[PriceRecord]:
     """Deduplicate only exact logical records, then order them chronologically."""
-    merged: dict[tuple[str, float, str, str], PriceRecord] = {}
+    merged: dict[tuple[str, str, str], PriceRecord] = {}
     for group in groups:
         for candidate in group:
             record = _normalise_record(candidate)
             if record is not None:
-                merged[(record["timestamp"], record["price"], record["cluster_id"], record["url"])] = record
-    return sorted(merged.values(), key=lambda record: (record["timestamp"], record["cluster_id"], record["price"]))
+                key = (record["product_type"], record["product_id"], record["timestamp"])
+                merged[key] = record
+    return sorted(merged.values(), key=lambda record: (record["product_type"], record["product_id"], record["timestamp"]))
 
 
 def load_price_history(path: Path = HISTORY_FILE) -> list[PriceRecord]:
@@ -122,9 +136,9 @@ def cleanup_old_history(records: Iterable[PriceRecord], now: datetime | None = N
     return merge_price_records(record for record in records if cutoff <= _parse_timestamp(record["timestamp"]) <= reference)
 
 
-def append_price_record(records: Iterable[PriceRecord], *, cluster_id: str, price: Decimal, url: str, timestamp: datetime | None = None) -> list[PriceRecord]:
+def append_price_record(records: Iterable[PriceRecord], *, cluster_id: str, price: Decimal, url: str, timestamp: datetime | None = None, product_type: str = "resell", product_name: str = "") -> list[PriceRecord]:
     checked_at = (timestamp or shanghai_now()).astimezone(SHANGHAI_TZ)
-    return merge_price_records(records, [{"timestamp": checked_at.isoformat(), "price": float(price), "cluster_id": cluster_id, "url": url}])
+    return merge_price_records(records, [{"timestamp": checked_at.isoformat(), "price": float(price), "cluster_id": cluster_id, "product_id": cluster_id, "product_type": product_type, "product_name": product_name, "url": url}])
 
 
 def _bucket_start(timestamp: datetime, granularity: Granularity) -> datetime:
@@ -135,12 +149,18 @@ def _bucket_start(timestamp: datetime, granularity: Granularity) -> datetime:
     raise ValueError("granularity 必须是 'hour' 或 'day'")
 
 
-def aggregate_price_history(records: Iterable[PriceRecord], granularity: Granularity = "hour", metric: Metric | None = None, include_empty: bool = True) -> list[AggregatePoint] | list[tuple[str, float | None]]:
-    """Aggregate raw observations by UTC+8 buckets, each strictly ``[start, end)``."""
-    buckets: dict[datetime, list[float]] = {}
+def aggregate_price_history(records: Iterable[PriceRecord], granularity: Granularity = "hour", metric: Metric | None = None, include_empty: bool = True, *, product_id: str, product_type: str = "resell") -> list[AggregatePoint] | list[tuple[str, float | None]]:
+    """Aggregate one product by UTC+8 buckets, each strictly ``[start, end)``.
+
+    Requiring the product identity makes an accidental cross-product statistic
+    impossible at the API boundary.
+    """
+    buckets: dict[datetime, list[Decimal]] = {}
     for record in merge_price_records(records):
+        if record["product_id"] != product_id or record["product_type"] != product_type:
+            continue
         bucket = _bucket_start(_parse_timestamp(record["timestamp"]), granularity)
-        buckets.setdefault(bucket, []).append(record["price"])
+        buckets.setdefault(bucket, []).append(Decimal(str(record["price"])))
     if not buckets:
         return []
     starts = sorted(buckets)
@@ -150,7 +170,12 @@ def aggregate_price_history(records: Iterable[PriceRecord], granularity: Granula
     last = starts[-1]
     while cursor <= last:
         values = buckets.get(cursor, [])
-        points.append({"time": cursor.isoformat(), "max": max(values) if values else None, "min": min(values) if values else None, "average": sum(values) / len(values) if values else None})
+        points.append({
+            "time": cursor.isoformat(),
+            "max": float(max(values)) if values else None,
+            "min": float(min(values)) if values else None,
+            "average": float(sum(values) / len(values)) if values else None,
+        })
         from datetime import timedelta
         cursor += timedelta(hours=step_hours)
     if metric is not None:
@@ -165,8 +190,8 @@ class PriceStorage:
     def __init__(self, database_path: str = "data/prices.db") -> None:
         self.history_path = Path(database_path).with_name("price_history.json")
 
-    def add_price(self, cluster_id: str, price: Decimal, url: str = "") -> None:
-        records = append_price_record(load_price_history(self.history_path), cluster_id=cluster_id, price=price, url=url)
+    def add_price(self, cluster_id: str, price: Decimal, url: str = "", *, product_type: str = "resell", product_name: str = "") -> None:
+        records = append_price_record(load_price_history(self.history_path), cluster_id=cluster_id, price=price, url=url, product_type=product_type, product_name=product_name)
         save_price_history(cleanup_old_history(records), self.history_path)
 
     def latest_price(self, cluster_id: str) -> Decimal | None:
