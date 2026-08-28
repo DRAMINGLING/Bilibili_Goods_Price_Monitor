@@ -418,5 +418,35 @@
     "price": 109.0,
     "cluster_id": "10000009511",
     "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
+  },
+  {
+    "timestamp": "2026-08-28T16:35:30.247881+08:00",
+    "price": 57.9,
+    "cluster_id": "10000008690",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1"
+  },
+  {
+    "timestamp": "2026-08-28T16:35:30.544312+08:00",
+    "price": 60.8,
+    "cluster_id": "10000001234",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
+  },
+  {
+    "timestamp": "2026-08-28T16:35:30.837205+08:00",
+    "price": 64.9,
+    "cluster_id": "10000000940",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
+  },
+  {
+    "timestamp": "2026-08-28T16:35:31.126184+08:00",
+    "price": 78.0,
+    "cluster_id": "10000001118",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
+  },
+  {
+    "timestamp": "2026-08-28T16:35:31.381322+08:00",
+    "price": 109.0,
+    "cluster_id": "10000009511",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
   }
 ]
