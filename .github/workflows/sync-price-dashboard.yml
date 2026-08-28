@@ -38,7 +38,7 @@ jobs:
         with:
           repository: ${{ env.TARGET_REPOSITORY }}
           ref: ${{ env.TARGET_BRANCH }}
-          token: ${{ secrets.PAGES_REPO_TOKEN }}
+          token: ${{ secrets.UPDATE_PRICE_HISTORY }}
           path: pages-repo
           fetch-depth: 0
 
