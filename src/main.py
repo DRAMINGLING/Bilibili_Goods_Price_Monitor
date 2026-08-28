@@ -86,7 +86,13 @@ def main():
             )
 
             # 先保存历史价格。
-            storage.add_price(info.cluster_id, info.price, info.url)
+            storage.add_price(
+                info.cluster_id,
+                info.price,
+                info.url,
+                product_type=product.get("product_type", "resell"),
+                product_name=product["name"],
+            )
             recorded_price = True
 
             condition = product[
