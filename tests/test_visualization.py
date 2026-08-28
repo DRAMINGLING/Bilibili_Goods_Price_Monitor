@@ -16,3 +16,11 @@ def test_chart_products_contain_only_their_own_prices(tmp_path: Path) -> None:
     b = payload["products"]["resell:B"]["hourly"][0]
     assert a["max"] == 44 and a["average"] == 42 and a["max"] < 100
     assert b["min"] == 100 and b["average"] == 110
+
+
+def test_dashboard_uses_relative_cache_busted_data_path() -> None:
+    html = (Path(__file__).parents[1] / "docs/index.html").read_text(encoding="utf-8")
+    assert "dataUrl: './price_history.json'" in html
+    assert "cache: 'no-store'" in html
+    assert "Date.now()" in html
+    assert "allProducts.flatMap" not in html

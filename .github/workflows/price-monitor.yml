@@ -27,7 +27,9 @@ jobs:
       - name: 运行单元测试
         run: python -m pytest -q
       - name: 写入前同步价格历史
+        shell: bash
         run: |
+          set -euo pipefail
           branch="${GITHUB_REF_NAME}"
           git fetch origin
           git pull --rebase origin "$branch"
@@ -40,7 +42,9 @@ jobs:
         run: python -m src.main
       - name: 提交价格历史
         if: always()
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python -m src.git_sync
