@@ -1,11 +1,9 @@
 """Git persistence with finite retry and semantic JSON-record merging."""
 from __future__ import annotations
 import subprocess
-from pathlib import Path
 from src.storage import HISTORY_FILE, cleanup_old_history, load_price_history, merge_price_records, save_price_history
-from src.visualization import generate_visualization
 
-TRACKED = (HISTORY_FILE, Path("docs/price_history.json"))
+TRACKED = (HISTORY_FILE,)
 
 def run_git(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], check=False, text=True, capture_output=True)
@@ -40,7 +38,6 @@ def commit_and_push(max_attempts: int = 3) -> bool:
             run_git("rebase", "--abort")
             raise RuntimeError("无法将价格历史变基到远程最新状态")
         save_price_history(cleanup_old_history(merge_price_records(load_price_history(), local_records)))
-        generate_visualization()
         amend = run_git("add", *(str(path) for path in TRACKED))
         if amend.returncode or run_git("commit", "--amend", "--no-edit").returncode:
             raise RuntimeError("无法在变基后合并价格历史")

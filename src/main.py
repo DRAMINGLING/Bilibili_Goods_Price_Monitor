@@ -12,7 +12,6 @@ from src.bilibili import BilibiliFetcher
 from src.conditions import check_condition
 from src.notifier import send_price_alert
 from src.storage import PriceStorage
-from src.visualization import generate_visualization
 
 
 CONFIG_FILE = Path(
@@ -55,7 +54,6 @@ def main():
     )
 
     failures = []
-    recorded_price = False
     for product in config.get(
         "products",
         [],
@@ -93,7 +91,6 @@ def main():
                 product_type=product.get("product_type", "resell"),
                 product_name=product["name"],
             )
-            recorded_price = True
 
             condition = product[
                 "condition"
@@ -157,10 +154,6 @@ def main():
                 f"ERROR: 商品检查失败：{exc}"
             )
             failures.append(f"{product['name']}: {exc}")
-
-    # The page is derived only from raw successful observations.
-    if recorded_price:
-        generate_visualization()
 
     if failures:
         # 让 GitHub Actions 明确标红，避免错误被误认为成功的价格检查。

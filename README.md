@@ -16,7 +16,7 @@
 
 可在任意商品配置中设置 `enabled: false`，临时停用已经下架或接口不再可用的商品。被停用的商品会在日志中明确显示为“跳过”，不会被视为一次成功的价格检查。取得新的有效商品链接后，更新 `url`、`cluster_id` 并删除（或改为 `true`）该字段即可重新启用。
 
-## 价格历史与可视化
+## 价格历史
 
 每一次成功查询都会追加一条原始观测到 `data/price_history.json`，而不是保存预先聚合的数值。例如：
 
@@ -36,13 +36,13 @@
 
 时间戳和所有统计都使用 `Asia/Shanghai`（UTC+8），不会依赖 GitHub runner 的系统时区。历史只保留最近 **3 个自然月**：清理时从当前东八区时间减三个月，并在目标月不存在该日期时安全地钳制到月末（不是简单减 90 天）。仓库旧的 `data/prices.db` 会在 JSON 文件首次缺失时被尽力读取并迁移；无法解析的旧行会被安全跳过。
 
-工作流在成功取得每个商品价格后写入原始记录，再**先按商品隔离、后按时间分桶**计算统计。小时桶严格为 `[HH:00, HH+1:00)`，日桶严格为 `[00:00, 次日 00:00)`；所以右边界的记录属于下一个桶。每个桶的最高价、最低价和均价只来自同一 `product_type + product_id` 的原始采样，绝不使用其他商品或其他桶的值，日均价也直接使用当日原始样本。例如商品 A 的 40、44 元得到均价 42 元，商品 B 的 100、120 元得到均价 110 元；不会产生跨商品均价 76 元。中间没有成功采样的小时或日期输出 `null`，图表显示为缺口而不是 0。
+工作流在成功取得每个商品价格后写入原始记录。统计代码会**先按商品隔离、后按时间分桶**。小时桶严格为 `[HH:00, HH+1:00)`，日桶严格为 `[00:00, 次日 00:00)`；所以右边界的记录属于下一个桶。每个桶的最高价、最低价和均价只来自同一 `product_type + product_id` 的原始采样，绝不使用其他商品或其他桶的值，日均价也直接使用当日原始样本。例如商品 A 的 40、44 元得到均价 42 元，商品 B 的 100、120 元得到均价 110 元；不会产生跨商品均价 76 元。中间没有成功采样的小时或日期输出 `null`，而不是 0。
 
-`docs/index.html` 是将被同步到个人站点子目录的轻量静态 Chart.js 折线图。页面先选择具体商品，再独立切换 **按小时/按天** 横轴及 **最高价/最低价/均价** 纵轴；标题显示商品名称和 Cluster ID；悬停会显示东八区时间和具体人民币价格，纵轴单位为“价格（元）”。聚合图表数据在 `docs/price_history.json`，仅为展示生成，可随时由原始记录重建。
+仓库只保留 `data/price_history.json` 这一份历史文件。网页及其展示逻辑由个人站点仓库独立维护，本仓库不会生成或提交 HTML，也不会生成第二份展示 JSON。
 
 ## Actions 写入一致性
 
-价格写入 job 使用 `concurrency.group: price-monitor-data` 且 `cancel-in-progress: false`，并授予最小的 `contents: write` 权限。写入前会根据运行时分支执行 `git fetch origin` 和 `git pull --rebase origin <branch>`；不会硬编码分支名。提交阶段最多推送 3 次。若 push 被拒绝，脚本保存本次原始记录，通过 `git pull --rebase` 获取远程最新提交，将远程记录和本地记录按 `product_type + product_id + timestamp` 去重合并、按商品和时间稳定排序（不同商品的相同时间戳不会互相覆盖）、清理过期项并重新生成图表后再次提交。这样不会用 `ours`/`theirs` 丢弃合法的价格观测；没有文件变化时不会创建空提交。
+价格写入 job 使用 `concurrency.group: price-monitor-data` 且 `cancel-in-progress: false`，并授予最小的 `contents: write` 权限。写入前会根据运行时分支执行 `git fetch origin` 和 `git pull --rebase origin <branch>`；不会硬编码分支名。提交阶段最多推送 3 次。若 push 被拒绝，脚本保存本次原始记录，通过 `git pull --rebase` 获取远程最新提交，将远程记录和本地记录按 `product_type + product_id + timestamp` 去重合并、按商品和时间稳定排序（不同商品的相同时间戳不会互相覆盖）、清理过期项并再次提交。这样不会用 `ours`/`theirs` 丢弃合法的价格观测；没有文件变化时不会创建空提交。
 
 ## 配置邮件
 
@@ -60,16 +60,15 @@
 Bilibili API
 → Price Monitor
 → data/price_history.json（源数据）
-→ docs/price_history.json（按商品隔离的展示数据）
 → Sync Price Dashboard workflow
 → DRAMINGLING/dramingling.github.io
 → GitHub Pages
 ```
 
-`Bilibili 商品价格监控` workflow 成功完成后，`Sync Price Dashboard` 通过 `workflow_run` 触发，将本仓库的 `docs/index.html` 和 `docs/price_history.json` 仅复制到目标仓库的 `personal_documents/Bilibili_Goods_Price_Monitor/`。Pages 仓库只是发布副本，不采集价格，也不反向修改源数据。
+`Bilibili 商品价格监控` workflow 成功完成后，`Sync Price Dashboard` 通过 `workflow_run` 触发，只将本仓库的 `data/price_history.json` 复制到目标仓库的 `personal_documents/Bilibili_Goods_Price_Monitor/data/price_history.json`。Pages 仓库自己维护网页文件；同步任务不采集价格，也不反向修改源数据。
 
 ### 跨仓库发布 Secret
 
 在本仓库依次打开 **Settings → Secrets and variables → Actions → New repository secret**，创建名为 `UPDATE_PRICE_HISTORY` 的 Secret。建议使用 Fine-grained personal access token，并仅授权 `DRAMINGLING/dramingling.github.io` 仓库的 **Contents: Read and write** 权限；不要将 Token 值写入配置、README 或任何提交。
 
-目标仓库应从 `main` 分支发布 GitHub Pages。同步任务只暂存并提交目标目录内的 `index.html` 与 `price_history.json`，不会修改个人站点中的其他目录。
+目标仓库应从 `main` 分支发布 GitHub Pages。同步任务会先 fetch 并 pull/rebase 远程更新，然后只暂存目标目录内的 `data/price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
