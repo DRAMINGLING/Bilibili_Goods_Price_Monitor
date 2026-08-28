@@ -5,7 +5,7 @@ from pathlib import Path
 from src.storage import HISTORY_FILE, cleanup_old_history, load_price_history, merge_price_records, save_price_history
 from src.visualization import generate_visualization
 
-TRACKED = (HISTORY_FILE, Path("docs/price_history.json"), Path("docs/index.html"))
+TRACKED = (HISTORY_FILE, Path("docs/price_history.json"))
 
 def run_git(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], check=False, text=True, capture_output=True)
@@ -22,20 +22,28 @@ def sync_before_write(branch: str) -> None:
 
 def commit_and_push(max_attempts: int = 3) -> bool:
     branch = current_branch()
+    run_git("add", *(str(path) for path in TRACKED))
+    if run_git("diff", "--cached", "--quiet").returncode == 0:
+        return True
+    committed = run_git("commit", "-m", "chore: update price history")
+    if committed.returncode:
+        raise RuntimeError(committed.stderr)
+
     for attempt in range(max_attempts):
-        run_git("add", *(str(path) for path in TRACKED))
-        if run_git("diff", "--cached", "--quiet").returncode == 0: return True
-        committed = run_git("commit", "-m", "chore: update price history")
-        if committed.returncode: raise RuntimeError(committed.stderr)
-        if run_git("push", "origin", branch).returncode == 0: return True
-        # Preserve our raw records, replace the rejected commit with remote state,
-        # then regenerate derived files from remote + local observations.
+        if run_git("push", "origin", branch).returncode == 0:
+            return True
+        if attempt == max_attempts - 1:
+            break
+        # Preserve observations while rebasing our commit onto the newest remote.
         local_records = load_price_history()
-        sync = run_git("fetch", "origin")
-        if sync.returncode: raise RuntimeError(sync.stderr)
-        if run_git("reset", "--hard", f"origin/{branch}").returncode: raise RuntimeError("无法重置到远程最新状态")
+        if run_git("pull", "--rebase", "origin", branch).returncode:
+            run_git("rebase", "--abort")
+            raise RuntimeError("无法将价格历史变基到远程最新状态")
         save_price_history(cleanup_old_history(merge_price_records(load_price_history(), local_records)))
         generate_visualization()
+        amend = run_git("add", *(str(path) for path in TRACKED))
+        if amend.returncode or run_git("commit", "--amend", "--no-edit").returncode:
+            raise RuntimeError("无法在变基后合并价格历史")
     raise RuntimeError(f"git push 在 {max_attempts} 次尝试后仍失败")
 
 

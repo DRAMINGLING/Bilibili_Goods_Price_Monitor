@@ -1,0 +1,81 @@
+name: Sync Price Dashboard
+
+on:
+  workflow_run:
+    workflows:
+      - Bilibili 商品价格监控
+    types:
+      - completed
+  workflow_dispatch:
+
+env:
+  TARGET_REPOSITORY: DRAMINGLING/dramingling.github.io
+  TARGET_BRANCH: main
+  TARGET_DIRECTORY: personal_documents/Bilibili_Goods_Price_Monitor
+
+concurrency:
+  group: sync-bilibili-price-dashboard
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync-dashboard:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repository
+        uses: actions/checkout@v4
+        with:
+          # workflow_run.head_sha predates the history commit made by that run;
+          # the branch tip contains the committed JSON after successful completion.
+          ref: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          fetch-depth: 1
+
+      - name: Checkout GitHub Pages repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_REPOSITORY }}
+          ref: ${{ env.TARGET_BRANCH }}
+          token: ${{ secrets.PAGES_REPO_TOKEN }}
+          path: pages-repo
+          fetch-depth: 0
+
+      - name: Prepare dashboard files
+        shell: bash
+        run: |
+          set -euo pipefail
+          destination="pages-repo/${TARGET_DIRECTORY}"
+          mkdir -p "${destination}"
+          cp docs/index.html "${destination}/index.html"
+          cp docs/price_history.json "${destination}/price_history.json"
+
+      - name: Commit dashboard update
+        id: commit
+        working-directory: pages-repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin "${TARGET_BRANCH}"
+          git add -- "${TARGET_DIRECTORY}/index.html" "${TARGET_DIRECTORY}/price_history.json"
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            git commit -m "chore: update Bilibili price dashboard"
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Push dashboard update
+        if: steps.commit.outputs.changed == 'true'
+        working-directory: pages-repo
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git push origin "HEAD:${TARGET_BRANCH}"; then
+            echo "Remote changed during publish; rebasing once before the final retry."
+            git pull --rebase origin "${TARGET_BRANCH}"
+            git push origin "HEAD:${TARGET_BRANCH}"
+          fi

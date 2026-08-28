@@ -86,3 +86,19 @@ def test_multi_product_daily_boundary_is_isolated() -> None:
     ]
     assert [p["average"] for p in aggregate_price_history(records, "day", product_id="A")] == [40, 42]
     assert [p["average"] for p in aggregate_price_history(records, "day", product_id="B")] == [100, 110]
+
+
+def test_saved_multi_product_history_can_be_loaded_again(tmp_path) -> None:
+    """持久化不得改变商品身份或把多个商品合并。"""
+    from src.storage import load_price_history, save_price_history
+
+    path = tmp_path / "price_history.json"
+    original = [
+        multi_record("A", "2026-08-28T10:00:00+08:00", 55.5),
+        multi_record("B", "2026-08-28T10:00:00+08:00", 99.9),
+    ]
+    save_price_history(original, path)
+    loaded = load_price_history(path)
+    assert [(item["product_id"], item["price"]) for item in loaded] == [
+        ("A", 55.5), ("B", 99.9)
+    ]

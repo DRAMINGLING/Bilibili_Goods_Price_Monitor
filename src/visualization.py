@@ -9,7 +9,6 @@ import yaml
 
 from src.storage import HISTORY_FILE, aggregate_price_history, load_price_history
 
-CHART_FILE = Path("docs/index.html")
 DATA_FILE = Path("docs/price_history.json")
 CONFIG_FILE = Path("config/products.yaml")
 
@@ -45,15 +44,12 @@ def build_chart_data(records: list[dict], config_path: Path = CONFIG_FILE) -> di
             "hourly": aggregate_price_history(records, "hour", product_id=product_id, product_type=product_type),
             "daily": aggregate_price_history(records, "day", product_id=product_id, product_type=product_type),
         }
-    return {"products": products}
+    updated_at = max((record["timestamp"] for record in records), default=None)
+    return {"updated_at": updated_at, "products": products}
 
 
-def generate_visualization(history_path: Path = HISTORY_FILE, chart_path: Path = CHART_FILE, data_path: Path = DATA_FILE, config_path: Path = CONFIG_FILE) -> None:
+def generate_visualization(history_path: Path = HISTORY_FILE, data_path: Path = DATA_FILE, config_path: Path = CONFIG_FILE) -> None:
+    """Regenerate the dashboard data; the hand-maintained HTML is not generated."""
     payload = build_chart_data(load_price_history(history_path), config_path)
     data_path.parent.mkdir(parents=True, exist_ok=True)
     data_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    chart_path.write_text(_html(), encoding="utf-8")
-
-
-def _html() -> str:
-    return '''<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Bilibili 商品价格历史</title><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><main><h1 id="title">Bilibili 商品价格历史</h1><p id="identity"></p><label>商品 <select id="product"></select></label> <label>时间单位 <select id="granularity"><option value="hourly">按小时</option><option value="daily">按天</option></select></label> <label>指标 <select id="metric"><option value="max">最高价</option><option value="min">最低价</option><option value="average" selected>均价</option></select></label><canvas id="chart"></canvas></main><script>let data,chart;const labels={max:'最高价',min:'最低价',average:'均价'};async function render(){const p=data.products[product.value],m=metric.value,points=p[granularity.value];title.textContent=p.name+' 价格走势';identity.textContent=`${p.product_type} / Cluster ID: ${p.product_id}`;if(chart)chart.destroy();chart=new Chart(document.getElementById('chart'),{type:'line',data:{labels:points.map(x=>new Date(x.time).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})),datasets:[{label:labels[m]+'（元）',data:points.map(x=>x[m]),borderColor:'#00a1d6',spanGaps:false}]},options:{responsive:true,interaction:{intersect:false},scales:{y:{title:{display:true,text:'价格（元）'}}},plugins:{tooltip:{callbacks:{label:c=>c.parsed.y===null?'无数据':`${labels[m]}：¥${c.parsed.y}`}}}}});}fetch('price_history.json').then(r=>r.json()).then(v=>{data=v;Object.entries(data.products).forEach(([key,p])=>product.add(new Option(`${p.name} (${p.product_id})`,key)));if(product.options.length)render()});product.onchange=render;granularity.onchange=render;metric.onchange=render;</script></html>'''
