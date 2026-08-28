@@ -70,6 +70,6 @@ Bilibili API
 
 ### 跨仓库发布 Secret
 
-在本仓库依次打开 **Settings → Secrets and variables → Actions → New repository secret**，创建名为 `PAGES_REPO_TOKEN` 的 Secret。建议使用 Fine-grained personal access token，并仅授权 `DRAMINGLING/dramingling.github.io` 仓库的 **Contents: Read and write** 权限；不要将 Token 值写入配置、README 或任何提交。
+在本仓库依次打开 **Settings → Secrets and variables → Actions → New repository secret**，创建名为 `UPDATE_PRICE_HISTORY` 的 Secret。建议使用 Fine-grained personal access token，并仅授权 `DRAMINGLING/dramingling.github.io` 仓库的 **Contents: Read and write** 权限；不要将 Token 值写入配置、README 或任何提交。
 
 目标仓库应从 `main` 分支发布 GitHub Pages。同步任务只暂存并提交目标目录内的 `index.html` 与 `price_history.json`，不会修改个人站点中的其他目录。
