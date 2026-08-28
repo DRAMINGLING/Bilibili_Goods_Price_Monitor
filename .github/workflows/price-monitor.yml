@@ -1,6 +1,8 @@
 name: Bilibili 商品价格监控
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -8,6 +10,9 @@ permissions:
 
 jobs:
   monitor:
+    concurrency:
+      group: price-monitor-data
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: 检出仓库
@@ -21,16 +26,24 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: 运行单元测试
         run: python -m pytest -q
+      - name: 写入前同步价格历史
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          git fetch origin
+          git pull --rebase origin "$branch"
       - name: 检查价格
+        id: price-check
+        continue-on-error: true
         env:
           # SMTP 密码只由 GitHub Secret 注入，绝不写入仓库。
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         run: python -m src.main
       - name: 提交价格历史
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # 数据库在 .gitignore 中排除本地误提交，因此这里明确强制暂存。
-          git add -f data/prices.db
-          git diff --cached --quiet || git commit -m "chore: update price history"
-          git push
+          python -m src.git_sync
+      - name: 标记价格检查失败
+        if: steps.price-check.outcome == 'failure'
+        run: exit 1
