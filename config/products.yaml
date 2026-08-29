@@ -46,7 +46,7 @@ products:
     # 当前价格 <= 45 元时触发提醒。
     condition:
       type: "lte"
-      price: 45
+      price: 50
 
     # 价格类型。
     #
@@ -88,7 +88,7 @@ products:
     cluster_id: "10000001118"
     condition:
       type: "lte"
-      price: 55
+      price: 60
     price_type: "displayed"
     cooldown_hours: 24
 
