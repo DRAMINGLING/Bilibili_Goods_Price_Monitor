@@ -60,7 +60,7 @@ products:
 
     # 防止同一个商品在达到目标价格后，
     # 每次 GitHub Actions 运行都重复发送邮件。
-    cooldown_hours: 24
+    cooldown_hours: 1
 
   - name: "Bilibili 会员购商品 小司"
     enabled: true
@@ -70,7 +70,7 @@ products:
       type: "lte"
       price: 55
     price_type: "displayed"
-    cooldown_hours: 24
+    cooldown_hours: 1
 
   - name: "Bilibili 会员购商品 唯"
     enabled: true
@@ -80,7 +80,7 @@ products:
       type: "lte"
       price: 55
     price_type: "displayed"
-    cooldown_hours: 24
+    cooldown_hours: 1
 
   - name: "Bilibili 会员购商品 阿梓喵"
     enabled: true
@@ -100,4 +100,4 @@ products:
       type: "lte"
       price: 80
     price_type: "displayed"
-    cooldown_hours: 24
+    cooldown_hours: 1
