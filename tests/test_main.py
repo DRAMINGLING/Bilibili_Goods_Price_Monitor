@@ -31,11 +31,15 @@ def test_disabled_product_is_skipped(monkeypatch, capsys) -> None:
 
 
 def test_products_config_is_valid_and_contains_enabled_products() -> None:
-    """工作流使用的商品配置必须可解析，且新增商品会被监控。"""
+    """工作流配置必须可解析，并允许单独禁用商品。"""
 
     config_path = Path(__file__).parents[1] / "config/products.yaml"
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
     assert isinstance(config, dict)
     assert len(config["products"]) == 5
-    assert all(product.get("enabled", True) for product in config["products"])
+    assert any(product.get("enabled", True) for product in config["products"])
+    assert all(
+        isinstance(product.get("enabled", True), bool)
+        for product in config["products"]
+    )
