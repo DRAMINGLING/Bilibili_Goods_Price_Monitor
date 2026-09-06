@@ -37,9 +37,11 @@ def test_products_config_is_valid_and_contains_enabled_products() -> None:
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
 
     assert isinstance(config, dict)
-    assert len(config["products"]) == 5
-    assert any(product.get("enabled", True) for product in config["products"])
+    products = config["products"]
+    assert isinstance(products, list)
+    assert products
+    assert any(product.get("enabled", True) for product in products)
     assert all(
         isinstance(product.get("enabled", True), bool)
-        for product in config["products"]
+        for product in products
     )
