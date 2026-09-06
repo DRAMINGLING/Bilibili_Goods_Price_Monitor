@@ -72,13 +72,13 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 唯"
-    enabled: false
-    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
-    cluster_id: "10000000940"
+  - name: "Bilibili 会员购商品 芙莉莲"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000164&noTitleBar=1"
+    cluster_id: "10000000164"
     condition:
       type: "lte"
-      price: 60
+      price: 45
     price_type: "displayed"
     cooldown_hours: 1
 
@@ -90,7 +90,7 @@ products:
       type: "lte"
       price: 60
     price_type: "displayed"
-    cooldown_hours: 24
+    cooldown_hours: 1
 
   - name: "Bilibili 会员购商品 波奇"
     enabled: true
@@ -101,3 +101,14 @@ products:
       price: 80
     price_type: "displayed"
     cooldown_hours: 1
+    
+  - name: "Bilibili 会员购商品 唯"
+    enabled: false
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
+    cluster_id: "10000000940"
+    condition:
+      type: "lte"
+      price: 60
+    price_type: "displayed"
+    cooldown_hours: 1
+
