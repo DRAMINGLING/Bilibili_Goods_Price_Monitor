@@ -73,7 +73,7 @@ products:
     cooldown_hours: 1
 
   - name: "Bilibili 会员购商品 芙莉莲"
-    enabled: true
+    enabled: false
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000164&noTitleBar=1"
     cluster_id: "10000000164"
     condition:
