@@ -75,7 +75,7 @@ products:
   - name: "Bilibili 会员购商品 小镜"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1"
-    cluster_id: "10000000146”
+    cluster_id: "10000000146"
     condition:
       type: "lte"
       price: 50
