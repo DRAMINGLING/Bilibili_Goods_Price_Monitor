@@ -4401,6 +4401,15 @@
     "product_name": "Bilibili 会员购商品 小镜"
   },
   {
+    "timestamp": "2026-09-12T09:58:54.336414+08:00",
+    "price": 55.9,
+    "cluster_id": "10000000146",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1",
+    "product_id": "10000000146",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 小镜"
+  },
+  {
     "timestamp": "2026-09-06T18:54:14.210623+08:00",
     "price": 51.97,
     "cluster_id": "10000000164",
@@ -16552,6 +16561,15 @@
   },
   {
     "timestamp": "2026-09-12T09:56:50.547743+08:00",
+    "price": 102.0,
+    "cluster_id": "10000000653",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1",
+    "product_id": "10000000653",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 泉此方"
+  },
+  {
+    "timestamp": "2026-09-12T09:58:55.559976+08:00",
     "price": 102.0,
     "cluster_id": "10000000653",
     "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1",
@@ -115254,6 +115272,15 @@
     "product_name": "Bilibili 会员购商品 阿梓喵"
   },
   {
+    "timestamp": "2026-09-12T09:58:56.744129+08:00",
+    "price": 74.0,
+    "cluster_id": "10000001118",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1",
+    "product_id": "10000001118",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 阿梓喵"
+  },
+  {
     "timestamp": "2026-08-28T14:40:26.465958+08:00",
     "price": 60.8,
     "cluster_id": "10000001234",
@@ -183861,6 +183888,15 @@
     "product_name": "Bilibili 会员购商品 小司"
   },
   {
+    "timestamp": "2026-09-12T09:58:53.091999+08:00",
+    "price": 68.8,
+    "cluster_id": "10000001234",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1",
+    "product_id": "10000001234",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 小司"
+  },
+  {
     "timestamp": "2026-08-28T14:40:26.203201+08:00",
     "price": 57.9,
     "cluster_id": "10000008690",
@@ -252460,6 +252496,15 @@
   },
   {
     "timestamp": "2026-09-12T09:56:46.972850+08:00",
+    "price": 58.9,
+    "cluster_id": "10000008690",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1",
+    "product_id": "10000008690",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 澄闪"
+  },
+  {
+    "timestamp": "2026-09-12T09:58:51.871937+08:00",
     "price": 58.9,
     "cluster_id": "10000008690",
     "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1",
@@ -321085,6 +321130,15 @@
   },
   {
     "timestamp": "2026-09-12T09:56:52.990571+08:00",
+    "price": 108.0,
+    "cluster_id": "10000009511",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1",
+    "product_id": "10000009511",
+    "product_type": "resell",
+    "product_name": "Bilibili 会员购商品 波奇"
+  },
+  {
+    "timestamp": "2026-09-12T09:58:57.987397+08:00",
     "price": 108.0,
     "cluster_id": "10000009511",
     "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1",
