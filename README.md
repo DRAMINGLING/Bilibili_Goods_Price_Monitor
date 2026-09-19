@@ -42,7 +42,7 @@
 
 ## Actions 写入一致性
 
-价格写入 job 使用 `concurrency.group: price-monitor-data` 且 `cancel-in-progress: false`，并授予最小的 `contents: write` 权限。写入前会根据运行时分支执行 `git fetch origin` 和 `git pull --rebase origin <branch>`；不会硬编码分支名。提交阶段最多推送 3 次。若 push 被拒绝，脚本保存本次原始记录，通过 `git pull --rebase` 获取远程最新提交，将远程记录和本地记录按 `product_type + product_id + timestamp` 去重合并、按商品和时间稳定排序（不同商品的相同时间戳不会互相覆盖）、清理过期项并再次提交。这样不会用 `ours`/`theirs` 丢弃合法的价格观测；没有文件变化时不会创建空提交。
+价格写入 job 使用 `concurrency.group: price-monitor-data` 且 `cancel-in-progress: false`，并授予最小的 `contents: write` 权限。作业取得执行权后，按运行时分支名检出该分支的最新版本（`ref: github.ref_name`、`fetch-depth: 1`），避免排队期间旧的触发提交漏掉上次运行写入的数据。常规路径不再执行额外的 fetch/pull，也不抓取其他分支历史；不会硬编码分支名。提交阶段最多推送 3 次。若 push 被拒绝，脚本保存本次原始记录，通过 `git pull --rebase` 获取远程最新提交，将远程记录和本地记录按 `product_type + product_id + timestamp` 去重合并、按商品和时间稳定排序（不同商品的相同时间戳不会互相覆盖）、清理过期项并再次提交。这样不会用 `ours`/`theirs` 丢弃合法的价格观测；没有文件变化时不会创建空提交。
 
 ## 配置邮件
 

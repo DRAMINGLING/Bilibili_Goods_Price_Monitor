@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: 检出仓库
         uses: actions/checkout@v5
+        with:
+          # A queued dispatch SHA can predate the previous monitor's data commit.
+          # Resolve the selected branch when this serialized job starts.
+          ref: ${{ github.ref_name }}
+          fetch-depth: 1
       - name: 配置 Python
         uses: actions/setup-python@v6
         with:
@@ -24,13 +29,6 @@ jobs:
         run: python -m pip install -r requirements.txt
       - name: 运行单元测试
         run: python -m pytest -q
-      - name: 写入前同步价格历史
-        shell: bash
-        run: |
-          set -euo pipefail
-          branch="${GITHUB_REF_NAME}"
-          git fetch origin
-          git pull --rebase origin "$branch"
       - name: 检查价格
         id: price-check
         continue-on-error: true
