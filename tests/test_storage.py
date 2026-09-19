@@ -7,7 +7,6 @@ from src.storage import (
     aggregate_price_history,
     append_price_record,
     cleanup_old_history,
-    subtract_months,
 )
 
 
@@ -36,11 +35,25 @@ def test_empty_buckets_are_null_not_zero() -> None:
     assert points[1] == {"time": "2026-08-28T11:00:00+08:00", "max": None, "min": None, "average": None}
 
 
-def test_natural_month_cleanup_handles_month_end_and_leap_year() -> None:
-    now = datetime(2024, 5, 31, 14, tzinfo=SHANGHAI_TZ)
-    assert subtract_months(now, 3) == datetime(2024, 2, 29, 14, tzinfo=SHANGHAI_TZ)
-    kept = cleanup_old_history([record("2024-02-29T14:00:00+08:00", "1"), record("2024-02-29T13:59:59+08:00", "2"), record("2024-05-30T00:00:00+08:00", "3")], now)
-    assert [item["price"] for item in kept] == [1.0, 3.0]
+def test_30_day_cleanup_handles_leap_day_and_inclusive_boundaries() -> None:
+    now = datetime(2024, 3, 30, 14, tzinfo=SHANGHAI_TZ)
+    kept = cleanup_old_history([
+        record("2024-02-29T13:59:59+08:00", "1"),
+        record("2024-02-29T14:00:00+08:00", "2"),
+        record("2024-03-30T14:00:00+08:00", "3"),
+        record("2024-03-30T14:00:01+08:00", "4"),
+    ], now)
+    assert [item["price"] for item in kept] == [2.0, 3.0]
+
+
+def test_30_day_cleanup_normalises_utc_and_is_not_a_calendar_month() -> None:
+    now = datetime(2026, 5, 31, 6, tzinfo=ZoneInfo("UTC"))
+    kept = cleanup_old_history([
+        record("2026-04-30T14:00:00+08:00", "1"),
+        record("2026-05-01T05:59:59Z", "2"),
+        record("2026-05-01T06:00:00Z", "3"),
+    ], now)
+    assert [item["price"] for item in kept] == [3.0]
 
 
 def test_append_records_uses_shanghai_timestamp() -> None:

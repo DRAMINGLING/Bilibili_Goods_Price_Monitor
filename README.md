@@ -34,7 +34,7 @@
 
 价格历史按商品独立保存和统计。市集转售商品使用稳定的 `clusterId` 作为 `product_id`，并与 `product_type` 组成唯一键；名称只用于展示。无法从 `product_id` 或旧版 `cluster_id` 可靠恢复身份的旧记录会被跳过，绝不会被猜测归入某件商品。
 
-时间戳和所有统计都使用 `Asia/Shanghai`（UTC+8），不会依赖 GitHub runner 的系统时区。历史只保留最近 **3 个自然月**：清理时从当前东八区时间减三个月，并在目标月不存在该日期时安全地钳制到月末（不是简单减 90 天）。仓库旧的 `data/prices.db` 会在 JSON 文件首次缺失时被尽力读取并迁移；无法解析的旧行会被安全跳过。
+时间戳和所有统计都使用 `Asia/Shanghai`（UTC+8），不会依赖 GitHub runner 的系统时区。历史只保留最近 **30 天**：以当前东八区时间为基准，保留闭区间 `[当前时间 - 30 天, 当前时间]` 内的记录（不是一个自然月），过期记录会在下一次历史清理时移除。仓库旧的 `data/prices.db` 会在 JSON 文件首次缺失时被尽力读取并迁移；无法解析的旧行会被安全跳过。
 
 工作流在成功取得每个商品价格后写入原始记录。统计代码会**先按商品隔离、后按时间分桶**。小时桶严格为 `[HH:00, HH+1:00)`，日桶严格为 `[00:00, 次日 00:00)`；所以右边界的记录属于下一个桶。每个桶的最高价、最低价和均价只来自同一 `product_type + product_id` 的原始采样，绝不使用其他商品或其他桶的值，日均价也直接使用当日原始样本。例如商品 A 的 40、44 元得到均价 42 元，商品 B 的 100、120 元得到均价 110 元；不会产生跨商品均价 76 元。中间没有成功采样的小时或日期输出 `null`，而不是 0。
 
@@ -71,4 +71,6 @@ Bilibili API
 
 在本仓库依次打开 **Settings → Secrets and variables → Actions → New repository secret**，创建名为 `UPDATE_PRICE_HISTORY` 的 Secret。建议使用 Fine-grained personal access token，并仅授权 `DRAMINGLING/dramingling.github.io` 仓库的 **Contents: Read and write** 权限；不要将 Token 值写入配置、README 或任何提交。
 
-目标仓库应从 `main` 分支发布 GitHub Pages。同步任务会先 fetch 并 pull/rebase 远程更新，然后只暂存目标目录内的 `data/price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
+目标仓库应从 `main` 分支发布 GitHub Pages。同步任务使用深度为 1 的浅克隆，仅检出目标数据目录，并只暂存其中的 `price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
+
+推送被拒绝时，仅获取目标分支最新提交，并以保存的发布基点执行显式 rebase，只重放本次数据提交，随后最多重试推送一次。该流程不依赖完整历史或共同祖先；同一文件发生冲突时会失败退出，不强制覆盖远端。同步仍使用原有串行执行设置。

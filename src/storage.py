@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import calendar
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Iterable, Literal, TypedDict
@@ -120,20 +119,10 @@ def save_price_history(records: Iterable[PriceRecord], path: Path = HISTORY_FILE
     path.write_text(json.dumps(merge_price_records(records), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def subtract_months(timestamp: datetime, months: int) -> datetime:
-    """Subtract natural calendar months, clamping month-end dates safely."""
-    local = timestamp.astimezone(SHANGHAI_TZ)
-    month_index = local.year * 12 + local.month - 1 - months
-    year, month_zero = divmod(month_index, 12)
-    month = month_zero + 1
-    day = min(local.day, calendar.monthrange(year, month)[1])
-    return local.replace(year=year, month=month, day=day)
-
-
 def cleanup_old_history(records: Iterable[PriceRecord], now: datetime | None = None) -> list[PriceRecord]:
-    """Keep timestamps in the natural-calendar three-month interval ``[cutoff, now]``."""
+    """Keep timestamps in the rolling 30-day interval ``[now - 30 days, now]``."""
     reference = (now or shanghai_now()).astimezone(SHANGHAI_TZ)
-    cutoff = subtract_months(reference, 3)
+    cutoff = reference - timedelta(days=30)
     return merge_price_records(record for record in records if cutoff <= _parse_timestamp(record["timestamp"]) <= reference)
 
 
@@ -177,7 +166,6 @@ def aggregate_price_history(records: Iterable[PriceRecord], granularity: Granula
             "min": float(min(values)) if values else None,
             "average": float(sum(values) / len(values)) if values else None,
         })
-        from datetime import timedelta
         cursor += timedelta(hours=step_hours)
     if metric is not None:
         if metric not in ("max", "min", "average"):
