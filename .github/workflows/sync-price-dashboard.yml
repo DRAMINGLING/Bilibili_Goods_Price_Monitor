@@ -40,15 +40,10 @@ jobs:
           ref: ${{ env.TARGET_BRANCH }}
           token: ${{ secrets.UPDATE_PRICE_HISTORY }}
           path: pages-repo
-          fetch-depth: 0
-
-      - name: Update GitHub Pages repository
-        working-directory: pages-repo
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin "${TARGET_BRANCH}"
-          git pull --rebase origin "${TARGET_BRANCH}"
+          fetch-depth: 1
+          sparse-checkout: |
+            /${{ env.TARGET_DIRECTORY }}/data/
+          sparse-checkout-cone-mode: false
 
       - name: Copy price history only
         shell: bash
@@ -71,6 +66,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
+            echo "base=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
             git commit -m "chore: update Bilibili price history"
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
@@ -79,10 +75,15 @@ jobs:
         if: steps.commit.outputs.changed == 'true'
         working-directory: pages-repo
         shell: bash
+        env:
+          PUBLISH_BASE: ${{ steps.commit.outputs.base }}
         run: |
           set -euo pipefail
           if ! git push origin "HEAD:${TARGET_BRANCH}"; then
             echo "Remote changed during publish; rebasing once before the final retry."
-            git pull --rebase origin "${TARGET_BRANCH}"
+            git fetch --no-tags --depth=1 origin "${TARGET_BRANCH}"
+            # Replay only our publish commit; shallow roots need no merge base.
+            # A same-file conflict fails safely instead of overwriting remote data.
+            git rebase --onto FETCH_HEAD "${PUBLISH_BASE}"
             git push origin "HEAD:${TARGET_BRANCH}"
           fi
