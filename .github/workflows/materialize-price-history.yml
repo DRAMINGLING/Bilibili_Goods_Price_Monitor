@@ -1,0 +1,27 @@
+name: Materialize cleaned price history
+on:
+  push:
+    branches:
+      - codex/import-price-history-20261011
+permissions:
+  contents: write
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Restore JSON and remove staging files
+        shell: bash
+        run: |
+          if [ ! -f data/price_history.json.gz ]; then exit 0; fi
+          gzip -t data/price_history.json.gz
+          gzip -dc data/price_history.json.gz > data/price_history.json
+          rm data/price_history.json.gz
+          rm .github/workflows/materialize-price-history.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- data/price_history.json data/price_history.json.gz .github/workflows/materialize-price-history.yml
+          git commit -m "Restore cleaned price history JSON"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
