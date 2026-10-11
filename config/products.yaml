@@ -2,7 +2,7 @@
 # Bilibili 商品价格监控配置
 # ============================================================
 #
-# 你以后只需要在这里增加商品即可。
+# 只需要在这里增加商品即可。
 #
 # condition:
 #   type: lte
@@ -32,7 +32,7 @@ products:
   # ----------------------------------------------------------
   # 你提供的 Bilibili 会员购商品
   # ----------------------------------------------------------
-  - name: "Bilibili 会员购商品 澄闪"
+  - name: "FuRyu 泡面压 澄闪 现货"
 
     # 使用 clusterId 调用公开商品详情接口查询当前最低价。
     enabled: true
@@ -62,7 +62,7 @@ products:
     # 每次 GitHub Actions 运行都重复发送邮件。
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 小司"
+  - name: "FuRyu Trio-Try-iT 小司 现货"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
     cluster_id: "10000001234"
@@ -71,18 +71,8 @@ products:
       price: 55
     price_type: "displayed"
     cooldown_hours: 1
-
-  - name: "Bilibili 会员购商品 小镜"
-    enabled: false
-    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1"
-    cluster_id: "10000000146"
-    condition:
-      type: "lte"
-      price: 50
-    price_type: "displayed"
-    cooldown_hours: 1
     
-  - name: "Bilibili 会员购商品 泉此方"
+  - name: "FuRyu Trio-Try-iT 泉此方 现货"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1"
     cluster_id: "10000000653"
@@ -92,7 +82,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 阿梓喵"
+  - name: "VISION CHILLfigg 阿梓喵 预售"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
     cluster_id: "10000001118"
@@ -102,7 +92,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 波奇"
+  - name: "Sega PM 波奇 现货"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
     cluster_id: "10000009511"
@@ -112,7 +102,17 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 伊雷娜"
+  - name: "Sega FIGURIZMa 义勇 预售"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000164&noTitleBar=1"
+    cluster_id: "10000000164"
+    condition:
+      type: "lte"
+      price: 60
+    price_type: "displayed"
+    cooldown_hours: 1
+   
+  - name: "TAITO AMP+ 伊蕾娜 现货"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000011221&noTitleBar=1"
     cluster_id: "10000011221"
@@ -122,7 +122,17 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "Bilibili 会员购商品 芙莉莲"
+  - name: "FuRyu Trio-Try-iT 小镜 现货"
+    enabled: false
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1"
+    cluster_id: "10000000146"
+    condition:
+      type: "lte"
+      price: 50
+    price_type: "displayed"
+    cooldown_hours: 1
+
+  - name: "Sega FIGURIZMa 芙莉莲 现货"
     enabled: false
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000164&noTitleBar=1"
     cluster_id: "10000000164"
@@ -132,7 +142,7 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
     
-  - name: "Bilibili 会员购商品 唯"
+  - name: "VISION CHILLfigg 唯 预售"
     enabled: false
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000940&noTitleBar=1"
     cluster_id: "10000000940"
