@@ -104,8 +104,8 @@ products:
 
   - name: "Sega FIGURIZMa 义勇 预售"
     enabled: true
-    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000164&noTitleBar=1"
-    cluster_id: "10000000164"
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000013380&noTitleBar=1"
+    cluster_id: "10000013380"
     condition:
       type: "lte"
       price: 60
