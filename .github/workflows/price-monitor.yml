@@ -30,8 +30,6 @@ jobs:
       - name: 运行单元测试
         run: python -m pytest -q
       - name: 检查价格
-        id: price-check
-        continue-on-error: true
         env:
           # SMTP 密码只由 GitHub Secret 注入，绝不写入仓库。
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
@@ -44,6 +42,3 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           python -m src.git_sync
-      - name: 标记价格检查失败
-        if: steps.price-check.outcome == 'failure'
-        run: exit 1
