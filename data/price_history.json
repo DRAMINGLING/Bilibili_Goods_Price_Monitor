@@ -1,23 +1,5 @@
 [
   {
-    "timestamp": "2026-09-17T13:04:50.695910+08:00",
-    "price": 55.0,
-    "cluster_id": "10000000146",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1",
-    "product_id": "10000000146",
-    "product_type": "resell",
-    "product_name": "FuRyu Trio-Try-iT 小镜 现货"
-  },
-  {
-    "timestamp": "2026-09-17T13:06:41.399507+08:00",
-    "price": 55.0,
-    "cluster_id": "10000000146",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000146&noTitleBar=1",
-    "product_id": "10000000146",
-    "product_type": "resell",
-    "product_name": "FuRyu Trio-Try-iT 小镜 现货"
-  },
-  {
     "timestamp": "2026-09-17T13:08:55.606171+08:00",
     "price": 55.0,
     "cluster_id": "10000000146",
@@ -24739,24 +24721,6 @@
     "product_id": "10000000146",
     "product_type": "resell",
     "product_name": "FuRyu Trio-Try-iT 小镜 现货"
-  },
-  {
-    "timestamp": "2026-09-17T13:04:52.607598+08:00",
-    "price": 103.89,
-    "cluster_id": "10000000653",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1",
-    "product_id": "10000000653",
-    "product_type": "resell",
-    "product_name": "FuRyu Trio-Try-iT 泉此方 现货"
-  },
-  {
-    "timestamp": "2026-09-17T13:06:42.680893+08:00",
-    "price": 103.89,
-    "cluster_id": "10000000653",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1",
-    "product_id": "10000000653",
-    "product_type": "resell",
-    "product_name": "FuRyu Trio-Try-iT 泉此方 现货"
   },
   {
     "timestamp": "2026-09-17T13:08:57.466916+08:00",
@@ -217809,22 +217773,13 @@
     "product_name": "FuRyu Trio-Try-iT 泉此方 现货"
   },
   {
-    "timestamp": "2026-09-17T13:04:54.464253+08:00",
-    "price": 74.0,
-    "cluster_id": "10000001118",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1",
-    "product_id": "10000001118",
+    "timestamp": "2026-10-17T13:06:30.222556+08:00",
+    "price": 125.97,
+    "cluster_id": "10000000653",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000000653&noTitleBar=1",
+    "product_id": "10000000653",
     "product_type": "resell",
-    "product_name": "VISION CHILLfigg 阿梓喵 预售"
-  },
-  {
-    "timestamp": "2026-09-17T13:06:44.131415+08:00",
-    "price": 74.0,
-    "cluster_id": "10000001118",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1",
-    "product_id": "10000001118",
-    "product_type": "resell",
-    "product_name": "VISION CHILLfigg 阿梓喵 预售"
+    "product_name": "FuRyu Trio-Try-iT 泉此方 现货"
   },
   {
     "timestamp": "2026-09-17T13:08:59.323309+08:00",
@@ -410895,13 +410850,13 @@
     "product_name": "VISION CHILLfigg 阿梓喵 预售"
   },
   {
-    "timestamp": "2026-09-17T13:06:40.087006+08:00",
-    "price": 69.9,
-    "cluster_id": "10000001234",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1",
-    "product_id": "10000001234",
+    "timestamp": "2026-10-17T13:06:34.391787+08:00",
+    "price": 85.0,
+    "cluster_id": "10000001118",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1",
+    "product_id": "10000001118",
     "product_type": "resell",
-    "product_name": "FuRyu Trio-Try-iT 小司 现货"
+    "product_name": "VISION CHILLfigg 阿梓喵 预售"
   },
   {
     "timestamp": "2026-09-17T13:08:53.744072+08:00",
@@ -603972,13 +603927,13 @@
     "product_name": "FuRyu Trio-Try-iT 小司 现货"
   },
   {
-    "timestamp": "2026-09-17T13:06:38.765558+08:00",
-    "price": 58.0,
-    "cluster_id": "10000008690",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1",
-    "product_id": "10000008690",
+    "timestamp": "2026-10-17T13:06:26.108722+08:00",
+    "price": 68.0,
+    "cluster_id": "10000001234",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1",
+    "product_id": "10000001234",
     "product_type": "resell",
-    "product_name": "FuRyu 泡面压 澄闪 现货"
+    "product_name": "FuRyu Trio-Try-iT 小司 现货"
   },
   {
     "timestamp": "2026-09-17T13:08:51.910146+08:00",
@@ -796968,22 +796923,13 @@
     "product_name": "FuRyu 泡面压 澄闪 现货"
   },
   {
-    "timestamp": "2026-09-17T13:04:56.402471+08:00",
-    "price": 108.0,
-    "cluster_id": "10000009511",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1",
-    "product_id": "10000009511",
+    "timestamp": "2026-10-17T13:06:21.952360+08:00",
+    "price": 65.0,
+    "cluster_id": "10000008690",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1",
+    "product_id": "10000008690",
     "product_type": "resell",
-    "product_name": "Sega PM 波奇 现货"
-  },
-  {
-    "timestamp": "2026-09-17T13:06:45.407195+08:00",
-    "price": 108.0,
-    "cluster_id": "10000009511",
-    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1",
-    "product_id": "10000009511",
-    "product_type": "resell",
-    "product_name": "Sega PM 波奇 现货"
+    "product_name": "FuRyu 泡面压 澄闪 现货"
   },
   {
     "timestamp": "2026-09-17T13:09:01.149689+08:00",
@@ -990018,6 +989964,15 @@
     "product_name": "Sega PM 波奇 现货"
   },
   {
+    "timestamp": "2026-10-17T13:06:38.487297+08:00",
+    "price": 109.0,
+    "cluster_id": "10000009511",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1",
+    "product_id": "10000009511",
+    "product_type": "resell",
+    "product_name": "Sega PM 波奇 现货"
+  },
+  {
     "timestamp": "2026-09-19T18:31:21.696943+08:00",
     "price": 108.0,
     "cluster_id": "10000011221",
@@ -1168632,6 +1168587,15 @@
     "product_name": "TAITO AMP+ 伊蕾娜 现货"
   },
   {
+    "timestamp": "2026-10-17T13:06:46.647318+08:00",
+    "price": 111.99,
+    "cluster_id": "10000011221",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000011221&noTitleBar=1",
+    "product_id": "10000011221",
+    "product_type": "resell",
+    "product_name": "TAITO AMP+ 伊蕾娜 现货"
+  },
+  {
     "timestamp": "2026-10-11T15:16:49.048256+08:00",
     "price": 74.0,
     "cluster_id": "10000013380",
@@ -1206766,6 +1206730,15 @@
   },
   {
     "timestamp": "2026-10-17T13:04:44.575385+08:00",
+    "price": 75.8,
+    "cluster_id": "10000013380",
+    "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000013380&noTitleBar=1",
+    "product_id": "10000013380",
+    "product_type": "resell",
+    "product_name": "Sega FIGURIZMa 义勇 预售"
+  },
+  {
+    "timestamp": "2026-10-17T13:06:42.551289+08:00",
     "price": 75.8,
     "cluster_id": "10000013380",
     "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000013380&noTitleBar=1",
