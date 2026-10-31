@@ -7,3 +7,7 @@ workers_dev = true
 MONITOR_REPOSITORY = "DRAMINGLING/Bilibili_Goods_Price_Monitor"
 MONITOR_BRANCH = "main"
 ALLOWED_ORIGIN = "https://dramingling.github.io"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
