@@ -26,8 +26,9 @@ def send_price_alert(
     smtp_password: str,
     product_name: str,
     price: Decimal,
-    target_price: Decimal,
+    target_price: Decimal | None,
     product_url: str,
+    previous_price: Decimal | None = None,
 ):
     """发送价格提醒邮件。"""
 
@@ -41,30 +42,41 @@ def send_price_alert(
 
     message = EmailMessage()
 
+    is_price_change = previous_price is not None
     message["Subject"] = (
-        f"[Bilibili价格提醒] {product_name}"
+        f"[Bilibili价格变动] {product_name}"
+        if is_price_change
+        else f"[Bilibili价格提醒] {product_name}"
     )
+
+    if is_price_change:
+        direction = "上涨" if price > previous_price else "下降"
+        alert_details = (
+            f"上次价格：¥{previous_price}\n"
+            f"当前价格：¥{price}\n"
+            f"价格变化：{direction}"
+        )
+        alert_reason = "该星标商品价格发生变化。"
+    else:
+        alert_details = f"当前价格：¥{price}\n目标价格：≤ ¥{target_price}"
+        alert_reason = "当前价格已经达到你设置的提醒条件。"
 
     message["From"] = smtp_user
     message["To"] = to_email
 
     message.set_content(
         f"""
-Bilibili 商品价格提醒
+Bilibili 商品价格通知
 
 商品：
 {product_name}
 
-当前价格：
-¥{price}
-
-目标价格：
-≤ ¥{target_price}
+{alert_details}
 
 商品链接：
 {product_url}
 
-当前价格已经达到你设置的提醒条件。
+{alert_reason}
 
 请以 Bilibili 页面最终结算价格为准。
 """.strip()
