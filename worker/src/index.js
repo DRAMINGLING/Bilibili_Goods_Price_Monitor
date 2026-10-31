@@ -52,9 +52,13 @@ function githubHeaders(env, json = false) {
 }
 
 function fileEndpoint(env) {
-  const repository = encodeURIComponent(env.MONITOR_REPOSITORY || "DRAMINGLING/Bilibili_Goods_Price_Monitor");
+  const repositoryParts = (env.MONITOR_REPOSITORY || "DRAMINGLING/Bilibili_Goods_Price_Monitor").split("/");
+  if (repositoryParts.length !== 2 || repositoryParts.some(part => !part)) {
+    throw new Error("MONITOR_REPOSITORY must be owner/repository");
+  }
+  const [owner, repository] = repositoryParts.map(encodeURIComponent);
   const branch = encodeURIComponent(env.MONITOR_BRANCH || "main");
-  return `https://api.github.com/repos/${repository}/contents/data/starred_products.json?ref=${branch}`;
+  return `https://api.github.com/repos/${owner}/${repository}/contents/data/starred_products.json?ref=${branch}`;
 }
 
 async function readStars(env) {
