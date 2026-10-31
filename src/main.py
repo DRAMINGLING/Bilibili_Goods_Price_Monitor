@@ -2,6 +2,7 @@
 Bilibili 商品价格监控主程序。
 """
 
+import json
 import os
 from pathlib import Path
 from decimal import Decimal
@@ -17,6 +18,7 @@ from src.storage import PriceStorage
 CONFIG_FILE = Path(
     "config/products.yaml"
 )
+STARRED_PRODUCTS_FILE = Path("data/starred_products.json")
 
 
 def load_config():
@@ -29,11 +31,29 @@ def load_config():
         return yaml.safe_load(f)
 
 
+def load_starred_product_ids() -> set[str]:
+    """Read product IDs selected in the dashboard; malformed data fails closed."""
+    try:
+        payload = json.loads(
+            STARRED_PRODUCTS_FILE.read_text(encoding="utf-8")
+        )
+    except FileNotFoundError:
+        return set()
+    except (OSError, ValueError) as exc:
+        raise RuntimeError(f"无法读取星标商品配置：{exc}") from exc
+
+    product_ids = payload.get("product_ids") if isinstance(payload, dict) else None
+    if not isinstance(product_ids, list):
+        raise ValueError("星标商品配置格式错误：product_ids 必须是数组。")
+    return {str(product_id) for product_id in product_ids if str(product_id).strip()}
+
+
 def main():
 
     config = load_config()
 
     storage = PriceStorage()
+    starred_product_ids = load_starred_product_ids()
 
     fetcher = BilibiliFetcher()
 
@@ -93,6 +113,8 @@ def main():
             f"当前价格：¥{info.price}"
         )
 
+        previous_price = storage.latest_price(info.cluster_id)
+
         # 先保存历史价格。
         storage.add_price(
             info.cluster_id,
@@ -101,6 +123,27 @@ def main():
             product_type=product.get("product_type", "resell"),
             product_name=product["name"],
         )
+
+        if str(info.cluster_id) in starred_product_ids:
+            if previous_price is None:
+                print("星标商品首次记录价格，建立基线，不发送邮件。")
+            elif info.price == previous_price:
+                print("星标商品价格未变化，不发送邮件。")
+            else:
+                print(f"星标商品价格变化：¥{previous_price} → ¥{info.price}")
+                send_price_alert(
+                    to_email=email_to,
+                    smtp_host=email_config.get("smtp_host", ""),
+                    smtp_port=int(email_config.get("smtp_port", 465)),
+                    smtp_user=email_config.get("smtp_user", ""),
+                    smtp_password=smtp_password,
+                    product_name=info.name,
+                    price=info.price,
+                    target_price=None,
+                    product_url=info.url,
+                    previous_price=previous_price,
+                )
+            continue
 
         condition = product[
             "condition"

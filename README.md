@@ -1,6 +1,6 @@
 # Bilibili 商品价格监控
 
-该项目每 30 分钟通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。
+该项目通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。工作流可手动运行；网页星标状态变化后也会请求立即运行一次。
 
 ## 当前监控项
 * 澄闪（ID: 10000008690）：价格小于或等于 `45` 元。
@@ -74,3 +74,30 @@ Bilibili API
 目标仓库应从 `main` 分支发布 GitHub Pages。同步任务使用深度为 1 的浅克隆，仅检出目标数据目录，并只暂存其中的 `price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
 
 推送被拒绝时，仅获取目标分支最新提交，并以保存的发布基点执行显式 rebase，只重放本次数据提交，随后最多重试推送一次。该流程不依赖完整历史或共同祖先；同一文件发生冲突时会失败退出，不强制覆盖远端。同步仍使用原有串行执行设置。
+
+
+## 星标商品与价格变动邮件
+
+在价格面板选中商品后，可切换“重点关注”星标。星标状态保存于
+`data/starred_products.json`。星标商品首次成功采样只建立价格基线；之后每次采样与上次价格不同时，
+无论涨价还是降价，都会发送一封邮件。价格相同不发邮件。取消星标后，该商品恢复为 `condition`
+阈值提醒。
+
+网页是静态 GitHub Pages，不能安全地直接写入仓库。星标写入由 `worker/` 中的 Cloudflare Worker
+代理处理。先将本分支合并到 `main`，再在有 Wrangler 的环境中部署：
+
+```sh
+cd worker
+npx wrangler login
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put STAR_API_KEY
+npx wrangler deploy
+```
+
+- `GITHUB_TOKEN` 使用 Fine-grained PAT，仅授权本仓库 `Contents: Read and write` 与 `Actions: Write`；前者保存星标，后者在状态变化后立即请求监控工作流。
+- `STAR_API_KEY` 使用独立随机值（例如 `python -c "import secrets; print(secrets.token_urlsafe(32))"`），不要复用 GitHub Token。
+- `ALLOWED_ORIGIN=https://dramingling.github.io` 已在 `worker/wrangler.toml` 配置。
+- 部署后，把 Wrangler 显示的 Worker `/stars` URL 填入面板 HTML 的 `CONFIG.starApiUrl`。
+- 在面板点星标时输入 `STAR_API_KEY`；页面仅将其保留在当前标签页会话。
+
+星标保存成功后，Worker 会请求 GitHub 立即派发一次监控任务；任务可能受 GitHub Actions 排队影响，不能保证在 1 秒或 1 分钟内开始。没有定时检查；如立即派发失败，可从 GitHub Actions 手动运行。星标商品的价格变化要在下一次监控运行时才能发现。两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。

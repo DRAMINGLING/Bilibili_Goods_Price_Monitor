@@ -1,0 +1,9 @@
+name = "bilibili-goods-star-api"
+main = "src/index.js"
+compatibility_date = "2026-10-31"
+workers_dev = true
+
+[vars]
+MONITOR_REPOSITORY = "DRAMINGLING/Bilibili_Goods_Price_Monitor"
+MONITOR_BRANCH = "main"
+ALLOWED_ORIGIN = "https://dramingling.github.io"
