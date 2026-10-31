@@ -1,6 +1,8 @@
 name: Bilibili 商品价格监控
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
