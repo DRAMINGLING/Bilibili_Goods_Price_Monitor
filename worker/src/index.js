@@ -76,6 +76,13 @@ async function updateStars(env, productId, starred) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const current = await readStars(env);
     const productIds = new Set(current.productIds);
+    const alreadyStarred = productIds.has(productId);
+    if (alreadyStarred === starred) {
+      return {
+        productIds: [...productIds].sort((a, b) => a.localeCompare(b, "en", {numeric: true})),
+        changed: false,
+      };
+    }
     if (starred) productIds.add(productId);
     else productIds.delete(productId);
     const sortedIds = [...productIds].sort((a, b) => a.localeCompare(b, "en", {numeric: true}));
@@ -90,12 +97,28 @@ async function updateStars(env, productId, starred) {
         branch: env.MONITOR_BRANCH || "main",
       }),
     });
-    if (response.ok) return sortedIds;
+    if (response.ok) return {productIds: sortedIds, changed: true};
     if (response.status !== 409 && response.status !== 422) {
       throw new Error(`GitHub write failed: ${response.status}`);
     }
   }
   throw new Error("Star list changed concurrently; retry the request");
+}
+
+
+async function triggerMonitor(env) {
+  const [owner, repository] = (env.MONITOR_REPOSITORY || "DRAMINGLING/Bilibili_Goods_Price_Monitor")
+    .split("/")
+    .map(encodeURIComponent);
+  if (!owner || !repository) throw new Error("MONITOR_REPOSITORY must be owner/repository");
+  const branch = env.MONITOR_BRANCH || "main";
+  const endpoint = `https://api.github.com/repos/${owner}/${repository}/actions/workflows/price-monitor.yml/dispatches`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: githubHeaders(env, true),
+    body: JSON.stringify({ref: branch}),
+  });
+  if (!response.ok) throw new Error(`Workflow dispatch failed: ${response.status}`);
 }
 
 export default {
@@ -145,8 +168,21 @@ export default {
     }
 
     try {
-      const productIds = await updateStars(env, productId, payload.starred);
-      return jsonResponse({product_ids: productIds}, 200, origin || allowedOrigin);
+      const saved = await updateStars(env, productId, payload.starred);
+      let monitorDispatched = null;
+      if (saved.changed) {
+        try {
+          await triggerMonitor(env);
+          monitorDispatched = true;
+        } catch (dispatchError) {
+          console.error("Star saved, but immediate monitor dispatch failed", dispatchError);
+          monitorDispatched = false;
+        }
+      }
+      return jsonResponse({
+        product_ids: saved.productIds,
+        monitor_dispatched: monitorDispatched,
+      }, 200, origin || allowedOrigin);
     } catch (error) {
       return jsonResponse({error: "star_update_failed"}, 502, origin || allowedOrigin);
     }
