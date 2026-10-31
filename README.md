@@ -74,3 +74,22 @@ Bilibili API
 目标仓库应从 `main` 分支发布 GitHub Pages。同步任务使用深度为 1 的浅克隆，仅检出目标数据目录，并只暂存其中的 `price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
 
 推送被拒绝时，仅获取目标分支最新提交，并以保存的发布基点执行显式 rebase，只重放本次数据提交，随后最多重试推送一次。该流程不依赖完整历史或共同祖先；同一文件发生冲突时会失败退出，不强制覆盖远端。同步仍使用原有串行执行设置。
+
+
+## 星标商品与价格变动邮件
+
+在价格面板选中商品后，可切换“重点关注”星标。星标状态保存于
+`data/starred_products.json`。星标商品首次成功采样只建立价格基线；之后每次采样与上次价格不同时，
+无论涨价还是降价，都会发送一封邮件。价格相同不发邮件。取消星标后，该商品恢复为 `condition`
+阈值提醒。
+
+网页是静态 GitHub Pages，不能安全地直接写入仓库。星标写入由 `worker/` 中的 Cloudflare Worker
+代理处理。部署 Worker 后：
+
+1. 为 Worker 配置 `GITHUB_TOKEN`：Fine-grained PAT，仅授权本仓库 `Contents: Read and write`。
+2. 生成随机的 `STAR_API_KEY`，设置为 Worker Secret。网页切换星标时会提示输入该密钥，并仅保留在当前标签页会话。
+3. 设置 Worker 变量 `ALLOWED_ORIGIN=https://dramingling.github.io`。
+4. 部署后，将 Worker 的 `/stars` URL 填入面板 HTML 中的 `CONFIG.starApiUrl`。
+5. 在面板点星标时输入同一个 `STAR_API_KEY`。
+
+密钥不应写入仓库。Worker 只会修改本仓库的星标 JSON 文件。
