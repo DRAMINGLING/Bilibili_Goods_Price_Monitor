@@ -94,10 +94,10 @@ npx wrangler secret put STAR_API_KEY
 npx wrangler deploy
 ```
 
-- `GITHUB_TOKEN` 使用 Fine-grained PAT，仅授权本仓库 `Contents: Read and write`。
+- `GITHUB_TOKEN` 使用 Fine-grained PAT，仅授权本仓库 `Contents: Read and write` 与 `Actions: Write`；前者保存星标，后者在状态变化后立即请求监控工作流。
 - `STAR_API_KEY` 使用独立随机值（例如 `python -c "import secrets; print(secrets.token_urlsafe(32))"`），不要复用 GitHub Token。
 - `ALLOWED_ORIGIN=https://dramingling.github.io` 已在 `worker/wrangler.toml` 配置。
 - 部署后，把 Wrangler 显示的 Worker `/stars` URL 填入面板 HTML 的 `CONFIG.starApiUrl`。
 - 在面板点星标时输入 `STAR_API_KEY`；页面仅将其保留在当前标签页会话。
 
-两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
+星标保存成功后，Worker 会请求 GitHub 立即派发一次监控任务；任务可能受 GitHub Actions 排队影响，不能保证在 1 秒或 1 分钟内开始。30 分钟定时检查仍作为兜底。两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
