@@ -1,6 +1,6 @@
 # Bilibili 商品价格监控
 
-该项目每 30 分钟通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。
+该项目通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。工作流可手动运行；网页星标状态变化后也会请求立即运行一次。
 
 ## 当前监控项
 * 澄闪（ID: 10000008690）：价格小于或等于 `45` 元。
@@ -100,4 +100,4 @@ npx wrangler deploy
 - 部署后，把 Wrangler 显示的 Worker `/stars` URL 填入面板 HTML 的 `CONFIG.starApiUrl`。
 - 在面板点星标时输入 `STAR_API_KEY`；页面仅将其保留在当前标签页会话。
 
-星标保存成功后，Worker 会请求 GitHub 立即派发一次监控任务；任务可能受 GitHub Actions 排队影响，不能保证在 1 秒或 1 分钟内开始。30 分钟定时检查仍作为兜底。两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
+星标保存成功后，Worker 会请求 GitHub 立即派发一次监控任务；任务可能受 GitHub Actions 排队影响，不能保证在 1 秒或 1 分钟内开始。没有定时检查；如立即派发失败，可从 GitHub Actions 手动运行。星标商品的价格变化要在下一次监控运行时才能发现。两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
