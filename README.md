@@ -84,12 +84,20 @@ Bilibili API
 阈值提醒。
 
 网页是静态 GitHub Pages，不能安全地直接写入仓库。星标写入由 `worker/` 中的 Cloudflare Worker
-代理处理。部署 Worker 后：
+代理处理。先将本分支合并到 `main`，再在有 Wrangler 的环境中部署：
 
-1. 为 Worker 配置 `GITHUB_TOKEN`：Fine-grained PAT，仅授权本仓库 `Contents: Read and write`。
-2. 生成随机的 `STAR_API_KEY`，设置为 Worker Secret。网页切换星标时会提示输入该密钥，并仅保留在当前标签页会话。
-3. 设置 Worker 变量 `ALLOWED_ORIGIN=https://dramingling.github.io`。
-4. 部署后，将 Worker 的 `/stars` URL 填入面板 HTML 中的 `CONFIG.starApiUrl`。
-5. 在面板点星标时输入同一个 `STAR_API_KEY`。
+```sh
+cd worker
+npx wrangler login
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put STAR_API_KEY
+npx wrangler deploy
+```
 
-密钥不应写入仓库。Worker 只会修改本仓库的星标 JSON 文件。
+- `GITHUB_TOKEN` 使用 Fine-grained PAT，仅授权本仓库 `Contents: Read and write`。
+- `STAR_API_KEY` 使用独立随机值（例如 `python -c "import secrets; print(secrets.token_urlsafe(32))"`），不要复用 GitHub Token。
+- `ALLOWED_ORIGIN=https://dramingling.github.io` 已在 `worker/wrangler.toml` 配置。
+- 部署后，把 Wrangler 显示的 Worker `/stars` URL 填入面板 HTML 的 `CONFIG.starApiUrl`。
+- 在面板点星标时输入 `STAR_API_KEY`；页面仅将其保留在当前标签页会话。
+
+两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
