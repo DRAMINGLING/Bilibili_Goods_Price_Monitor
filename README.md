@@ -1,6 +1,6 @@
 # Bilibili 商品价格监控
 
-该项目通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。工作流可手动运行；网页星标状态变化后也会请求立即运行一次。
+该项目通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。工作流仅手动运行。网页星标变化只保存状态，不会触发监控工作流。
 
 ## 当前监控项
 * 澄闪（ID: 10000008690）：价格小于或等于 `45` 元。
@@ -83,21 +83,15 @@ Bilibili API
 无论涨价还是降价，都会发送一封邮件。价格相同不发邮件。取消星标后，该商品恢复为 `condition`
 阈值提醒。
 
-网页是静态 GitHub Pages，不能安全地直接写入仓库。星标写入由 `worker/` 中的 Cloudflare Worker
-代理处理。先将本分支合并到 `main`，再在有 Wrangler 的环境中部署：
+网页是静态 GitHub Pages，不能安全地直接写入仓库。星标由 `worker/` 中的 Cloudflare Worker API 保存。可全程在浏览器中通过 Workers Builds 部署：
 
-```sh
-cd worker
-npx wrangler login
-npx wrangler secret put GITHUB_TOKEN
-npx wrangler secret put STAR_API_KEY
-npx wrangler deploy
-```
+1. 在 Cloudflare 控制台打开 **Workers & Pages → Create application → GitHub**，连接本仓库并选择 `main`。
+2. 项目名称使用 `bilibili-goods-star-api`，Root directory 设为 `worker`；Build command 留空，Deploy command 保持默认。
+3. 部署后在 Worker 的 **Settings → Variables and Secrets** 添加两个 Secret：
+   - `GITHUB_TOKEN`：Fine-grained PAT，仅授权本仓库 `Contents: Read and write`，用于读取和保存星标状态。
+   - `STAR_API_KEY`：独立随机密钥，不要复用 GitHub Token；请用密码管理器保存，Cloudflare 不会再次显示 Secret 值。
+4. `MONITOR_REPOSITORY`、`MONITOR_BRANCH` 和 `ALLOWED_ORIGIN` 已在 `worker/wrangler.toml` 配置。不要把密钥写入仓库。
+5. 复制 Worker 的 `workers.dev` 地址，在网页仓库中编辑 `personal_documents/Bilibili_Goods_Price_Monitor/index.html`，把 `CONFIG.starApiUrl` 设为该地址加上 `/stars`，然后从 GitHub 网页提交修改。
+6. 网页首次切换星标时输入 `STAR_API_KEY`。页面只在当前标签页会话保留它。
 
-- `GITHUB_TOKEN` 使用 Fine-grained PAT，仅授权本仓库 `Contents: Read and write` 与 `Actions: Write`；前者保存星标，后者在状态变化后立即请求监控工作流。
-- `STAR_API_KEY` 使用独立随机值（例如 `python -c "import secrets; print(secrets.token_urlsafe(32))"`），不要复用 GitHub Token。
-- `ALLOWED_ORIGIN=https://dramingling.github.io` 已在 `worker/wrangler.toml` 配置。
-- 部署后，把 Wrangler 显示的 Worker `/stars` URL 填入面板 HTML 的 `CONFIG.starApiUrl`。
-- 在面板点星标时输入 `STAR_API_KEY`；页面仅将其保留在当前标签页会话。
-
-星标保存成功后，Worker 会请求 GitHub 立即派发一次监控任务；任务可能受 GitHub Actions 排队影响，不能保证在 1 秒或 1 分钟内开始。没有定时检查；如立即派发失败，可从 GitHub Actions 手动运行。星标商品的价格变化要在下一次监控运行时才能发现。两个仓库的功能分支都合并后，星标控件与 Actions 才会使用同一套已部署配置。密钥不应写入仓库。Worker 只修改本仓库的星标 JSON 文件。
+Worker 只更新本仓库的星标 JSON，不会触发 GitHub Actions。没有定时检查；要检测星标商品后续的价格变化，需从 GitHub Actions 手动运行监控工作流。
