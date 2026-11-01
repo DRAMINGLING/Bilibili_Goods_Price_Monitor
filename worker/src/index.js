@@ -126,6 +126,7 @@ export default {
         const {productIds} = await readStars(env);
         return jsonResponse({product_ids: productIds}, 200, origin || allowedOrigin);
       } catch (error) {
+        console.error("GET /stars GitHub read failed:", error instanceof Error ? error.message : String(error));
         return jsonResponse({error: "star_list_unavailable"}, 502, origin || allowedOrigin);
       }
     }
