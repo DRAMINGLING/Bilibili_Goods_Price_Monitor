@@ -61,16 +61,6 @@ products:
     # 防止同一个商品在达到目标价格后，
     # 每次 GitHub Actions 运行都重复发送邮件。
     cooldown_hours: 1
-
-  - name: "FuRyu Trio-Try-iT 小司 现货"
-    enabled: true
-    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
-    cluster_id: "10000001234"
-    condition:
-      type: "lte"
-      price: 60
-    price_type: "displayed"
-    cooldown_hours: 1
     
   - name: "FuRyu Trio-Try-iT 泉此方 现货"
     enabled: true
@@ -129,6 +119,16 @@ products:
     condition:
       type: "lte"
       price: 50
+    price_type: "displayed"
+    cooldown_hours: 1
+
+  - name: "FuRyu Trio-Try-iT 小司 现货"
+    enabled: false
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001234&noTitleBar=1"
+    cluster_id: "10000001234"
+    condition:
+      type: "lte"
+      price: 60
     price_type: "displayed"
     cooldown_hours: 1
 
