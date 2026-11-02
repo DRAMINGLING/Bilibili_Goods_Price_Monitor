@@ -72,16 +72,6 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
-  - name: "VISION CHILLfigg 阿梓喵 预售"
-    enabled: true
-    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
-    cluster_id: "10000001118"
-    condition:
-      type: "lte"
-      price: 65
-    price_type: "displayed"
-    cooldown_hours: 1
-
   - name: "Sega PM 波奇 现货"
     enabled: true
     url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000009511&noTitleBar=1"
@@ -152,3 +142,12 @@ products:
     price_type: "displayed"
     cooldown_hours: 1
 
+  - name: "VISION CHILLfigg 阿梓喵 预售"
+    enabled: false
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000001118&noTitleBar=1"
+    cluster_id: "10000001118"
+    condition:
+      type: "lte"
+      price: 65
+    price_type: "displayed"
+    cooldown_hours: 1
