@@ -61,6 +61,16 @@ products:
     # 防止同一个商品在达到目标价格后，
     # 每次 GitHub Actions 运行都重复发送邮件。
     cooldown_hours: 1
+
+  - name: "BANPRESTO Re:0 雷姆 Sweet Angel ver. 预售"
+    enabled: true
+    url: "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000024408&noTitleBar=1"
+    cluster_id: "10000024408"
+    condition:
+      type: "lte"
+      price: 70
+    price_type: "displayed"
+    cooldown_hours: 1
     
   - name: "FuRyu Trio-Try-iT 泉此方 现货"
     enabled: true
