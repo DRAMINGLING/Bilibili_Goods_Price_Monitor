@@ -1,97 +1,95 @@
 # Bilibili 商品价格监控
 
-该项目通过 GitHub Actions 查询 Bilibili 会员购转售商品，并在价格满足条件时发送邮件提醒。工作流仅手动运行。网页星标变化只保存状态，不会触发监控工作流。
+本仓库通过 GitHub Actions 手动查询 Bilibili 会员购转售商品，记录价格历史，并按配置发送邮件提醒。价格面板由个人站点仓库提供；面板上的星标通过本仓库的 Cloudflare Worker 保存。价格监控没有定时计划，需要从 Actions 页面手动运行。
 
-## 当前监控项
-* 澄闪（ID: 10000008690）：价格小于或等于 `45` 元。
-* 小司（ID: 10000001234）：价格小于或等于 `45` 元。
-* 唯（ID: 10000000940）：价格小于或等于 `55` 元。
-* 阿梓喵（ID: 10000001118）：价格小于或等于 `55` 元。
-* 波奇（ID: 10000009511）：价格小于或等于 `70` 元。
-* 提醒邮箱已在配置中设置；SMTP 密码仍必须通过 `SMTP_PASSWORD` Secret 提供。
+## 仓库结构
 
-## 工作方式与边界
+| 路径 | 用途 |
+| --- | --- |
+| `config/products.yaml` | 邮件参数、商品链接、启用状态和价格条件 |
+| `src/bilibili.py` | 读取商品详情接口并解析价格 |
+| `src/main.py` | 查询商品、写入历史并按星标或条件发送提醒 |
+| `src/conditions.py` | 判断价格条件 |
+| `src/notifier.py` | 通过 SMTP SSL 发送提醒邮件 |
+| `src/storage.py` | 读写、清理、合并和统计价格历史 |
+| `src/git_sync.py` | 提交并推送价格历史 |
+| `data/price_history.json` | 商品价格观测记录 |
+| `data/starred_products.json` | 从价格面板选择的星标商品 ID |
+| `worker/` | 保存星标状态的 Cloudflare Worker |
+| `.github/workflows/price-monitor.yml` | 手动运行监控并提交历史 |
+| `.github/workflows/sync-price-dashboard.yml` | 将历史数据同步到 GitHub Pages 仓库 |
+| `tests/` | 查询、条件、通知、存储和工作流测试 |
 
-`BilibiliFetcher` 使用市集公开 JSON 详情接口 `mall-search-items/items_detail/cluster_info`，以 `clusterId` 作为参数读取 `data.clusterPriceFloorVO.priceTag.firstPrice`，而非从动态 HTML 中猜测金额。若接口要求登录、验证码、拒绝访问，或响应不含该明确最低价字段，程序会失败并把原因显示在 Actions 日志中；项目不会尝试绕过这些限制。
+## 当前商品配置
 
-可在任意商品配置中设置 `enabled: false`，临时停用已经下架或接口不再可用的商品。被停用的商品会在日志中明确显示为“跳过”，不会被视为一次成功的价格检查。取得新的有效商品链接后，更新 `url`、`cluster_id` 并删除（或改为 `true`）该字段即可重新启用。
+目前配置的启用商品都使用 `condition.type: "lte"`：当前价格小于或等于目标值时发送阈值提醒。
 
-## 价格历史
+| 状态 | 商品 | `cluster_id` | 条件 |
+| --- | --- | --- | --- |
+| 启用 | FuRyu 泡面压 澄闪 现货 | `10000008690` | ≤ ¥50 |
+| 启用 | BANPRESTO Re:0 雷姆 Sweet Angel ver. 预售 | `10000024408` | ≤ ¥70 |
+| 启用 | FuRyu Trio-Try-iT 泉此方 现货 | `10000000653` | ≤ ¥100 |
+| 启用 | Sega PM 波奇 现货 | `10000009511` | ≤ ¥80 |
+| 启用 | Sega FIGURIZMa 义勇 预售 | `10000013380` | ≤ ¥65 |
+| 启用 | TAITO AMP+ 伊蕾娜 现货 | `10000011221` | ≤ ¥60 |
+| 停用 | FuRyu Trio-Try-iT 小镜 现货 | `10000000146` | ≤ ¥50 |
+| 停用 | FuRyu Trio-Try-iT 小司 现货 | `10000001234` | ≤ ¥60 |
+| 停用 | Sega FIGURIZMa 芙莉莲 现货 | `10000000164` | ≤ ¥45 |
+| 停用 | VISION CHILLfigg 唯 预售 | `10000000940` | ≤ ¥60 |
+| 停用 | VISION CHILLfigg 阿梓喵 预售 | `10000001118` | ≤ ¥65 |
 
-每一次成功查询都会追加一条原始观测到 `data/price_history.json`，而不是保存预先聚合的数值。例如：
+`enabled: false` 的商品会被跳过；如果省略 `enabled`，程序默认启用。请求实际从 `url` 中读取 `clusterId`，修改商品时请同步更新 `url` 和 `cluster_id`。
+
+YAML 中还配置了 `price_type` 和 `cooldown_hours`，但当前 `src/main.py` 没有读取这两个字段。查询仍使用接口返回的 `firstPrice`，而 `cooldown_hours` 不会阻止重复通知：每次手动运行时，只要未星标商品仍满足价格条件，就会再次尝试发送邮件。
+
+## 查询、提醒与历史
+
+`BilibiliFetcher` 请求市集公开 JSON 详情接口 `mall-search-items/items_detail/cluster_info`，并从 `data.clusterPriceFloorVO.priceTag.firstPrice` 解析价格。程序不解析动态 HTML，也不使用 Cookie 或登录凭证。接口错误或返回内容无法可靠解析时，该商品不会产生新的价格记录。
+
+未星标商品按 `condition` 判断是否提醒。星标商品采用价格变动提醒：第一次成功采样只建立价格基线；之后价格上涨或下降都会发送邮件，价格未变则不发送。取消星标后，该商品恢复阈值提醒。星标状态保存在 `data/starred_products.json`，不会因切换星标而自动运行价格监控。
+
+每次成功查询都会向 `data/price_history.json` 写入原始观测，例如：
 
 ```json
 {
+  "timestamp": "2026-08-28T10:37:21+08:00",
+  "price": 50.5,
+  "cluster_id": "10000008690",
   "product_id": "10000008690",
   "product_type": "resell",
-  "product_name": "Bilibili 会员购商品 澄闪",
-  "timestamp": "2026-08-28T10:37:21+08:00",
-  "price": 45.5,
-  "cluster_id": "10000008690",
-  "url": "https://mall.bilibili.com/..."
+  "product_name": "FuRyu 泡面压 澄闪 现货",
+  "url": "https://mall.bilibili.com/neul-next/resell/detail.html?clusterId=10000008690&noTitleBar=1"
 }
 ```
 
-价格历史按商品独立保存和统计。市集转售商品使用稳定的 `clusterId` 作为 `product_id`，并与 `product_type` 组成唯一键；名称只用于展示。无法从 `product_id` 或旧版 `cluster_id` 可靠恢复身份的旧记录会被跳过，绝不会被猜测归入某件商品。
+历史时间和统计均使用 `Asia/Shanghai`（UTC+8），仅保留滚动 30 天内的记录。记录按 `product_type + product_id + timestamp` 去重；如果 JSON 历史文件不存在，存储模块会尝试从旧版 `data/prices.db` 迁移。`src/storage.py` 还提供按商品统计小时或日最高价、最低价和均价的函数，各时间桶采用左闭右开区间，统计不会混入其他商品。
 
-时间戳和所有统计都使用 `Asia/Shanghai`（UTC+8），不会依赖 GitHub runner 的系统时区。历史只保留最近 **30 天**：以当前东八区时间为基准，保留闭区间 `[当前时间 - 30 天, 当前时间]` 内的记录（不是一个自然月），过期记录会在下一次历史清理时移除。仓库旧的 `data/prices.db` 会在 JSON 文件首次缺失时被尽力读取并迁移；无法解析的旧行会被安全跳过。
+邮件收件地址及 SMTP 主机、端口、用户名在 `config/products.yaml` 的 `email` 下配置。当前使用 QQ SMTP（`smtp.qq.com:465`），配置中已填写收件地址。SMTP 密码必须放在本仓库的 Actions Secret `SMTP_PASSWORD` 中，不能写入 YAML 或代码。`email.to` 留空时会跳过发送。
 
-工作流在成功取得每个商品价格后写入原始记录。统计代码会**先按商品隔离、后按时间分桶**。小时桶严格为 `[HH:00, HH+1:00)`，日桶严格为 `[00:00, 次日 00:00)`；所以右边界的记录属于下一个桶。每个桶的最高价、最低价和均价只来自同一 `product_type + product_id` 的原始采样，绝不使用其他商品或其他桶的值，日均价也直接使用当日原始样本。例如商品 A 的 40、44 元得到均价 42 元，商品 B 的 100、120 元得到均价 110 元；不会产生跨商品均价 76 元。中间没有成功采样的小时或日期输出 `null`，而不是 0。
+## GitHub Actions 与 Dashboard
 
-仓库只保留 `data/price_history.json` 这一份历史文件。网页及其展示逻辑由个人站点仓库独立维护，本仓库不会生成或提交 HTML，也不会生成第二份展示 JSON。
-
-## Actions 写入一致性
-
-价格写入 job 使用 `concurrency.group: price-monitor-data` 且 `cancel-in-progress: false`，并授予最小的 `contents: write` 权限。作业取得执行权后，按运行时分支名检出该分支的最新版本（`ref: github.ref_name`、`fetch-depth: 1`），避免排队期间旧的触发提交漏掉上次运行写入的数据。常规路径不再执行额外的 fetch/pull，也不抓取其他分支历史；不会硬编码分支名。提交阶段最多推送 3 次。若 push 被拒绝，脚本保存本次原始记录，通过 `git pull --rebase` 获取远程最新提交，将远程记录和本地记录按 `product_type + product_id + timestamp` 去重合并、按商品和时间稳定排序（不同商品的相同时间戳不会互相覆盖）、清理过期项并再次提交。这样不会用 `ours`/`theirs` 丢弃合法的价格观测；没有文件变化时不会创建空提交。
-
-## 配置邮件
-
-在 `config/products.yaml` 填写 `email.to`、SMTP 主机、端口和用户名；将 SMTP 密码设置为仓库的 `SMTP_PASSWORD` Secret。密码绝不能提交到 YAML、代码或 Git 历史中。
-
-可从 Actions 页面使用 **Run workflow** 手动执行。
-
-## Dashboard
+在 **Actions → Bilibili 商品价格监控 → Run workflow** 手动执行监控。工作流使用 Ubuntu 和 Python 3.12，先安装依赖、运行 `pytest`，再执行 `src.main` 并提交价格历史。监控按 `price-monitor-data` 串行运行，开始时检出所选分支的最新版本。若推送历史时遇到远端更新，`src.git_sync` 会变基并按商品与时间合并记录，最多尝试推送三次；没有变化时不会创建空提交。
 
 公开价格面板：<https://dramingling.github.io/personal_documents/Bilibili_Goods_Price_Monitor/>
 
-发布链路保持单向且职责清晰：
+监控工作流成功完成后，**Sync Price Dashboard** 会把本仓库的 `data/price_history.json` 发布到 `DRAMINGLING/dramingling.github.io` 仓库 `main` 分支的 `personal_documents/Bilibili_Goods_Price_Monitor/data/price_history.json`。也可手动运行同步工作流。同步只复制价格数据，不采集价格，也不复制网页文件。跨仓库发布需要设置 Actions Secret `UPDATE_PRICE_HISTORY`，建议使用仅对目标仓库授予 **Contents: Read and write** 权限的 Fine-grained personal access token。
+
+数据流：
 
 ```text
-Bilibili API
-→ Price Monitor
-→ data/price_history.json（源数据）
-→ Sync Price Dashboard workflow
-→ DRAMINGLING/dramingling.github.io
-→ GitHub Pages
+Bilibili 市集接口 → 价格监控工作流 → data/price_history.json
+                                      └→ Sync Price Dashboard → GitHub Pages 数据文件
+价格面板 ↔ Cloudflare Worker ↔ data/starred_products.json
 ```
 
-`Bilibili 商品价格监控` workflow 成功完成后，`Sync Price Dashboard` 通过 `workflow_run` 触发，只将本仓库的 `data/price_history.json` 复制到目标仓库的 `personal_documents/Bilibili_Goods_Price_Monitor/data/price_history.json`。Pages 仓库自己维护网页文件；同步任务不采集价格，也不反向修改源数据。
+## 星标 Worker 配置
 
-### 跨仓库发布 Secret
+`worker/src/index.js` 提供星标 API；`worker/wrangler.toml` 配置目标仓库、分支和允许访问的网页来源。Worker 通过 GitHub Contents API 读写 `data/starred_products.json`：读取列表无需密钥，更新列表需要 `STAR_API_KEY`。GitHub Token 和 API 密钥只保存在 Cloudflare Worker Secrets 中，不要写进仓库或网页。
 
-在本仓库依次打开 **Settings → Secrets and variables → Actions → New repository secret**，创建名为 `UPDATE_PRICE_HISTORY` 的 Secret。建议使用 Fine-grained personal access token，并仅授权 `DRAMINGLING/dramingling.github.io` 仓库的 **Contents: Read and write** 权限；不要将 Token 值写入配置、README 或任何提交。
+可在 Cloudflare 控制台通过 Workers Builds 部署：连接本仓库的 `main` 分支，Root directory 设为 `worker`，Build command 留空；然后在 Worker 的 **Settings → Variables and Secrets** 中添加：
 
-目标仓库应从 `main` 分支发布 GitHub Pages。同步任务使用深度为 1 的浅克隆，仅检出目标数据目录，并只暂存其中的 `price_history.json`；没有数据变化时正常结束，不会创建空提交，也不会修改个人站点中的其他文件。
+- `GITHUB_TOKEN`：Fine-grained personal access token，仅授予本仓库 **Contents: Read and write** 权限。
+- `STAR_API_KEY`：单独生成的随机密钥，不要复用 GitHub Token。
 
-推送被拒绝时，仅获取目标分支最新提交，并以保存的发布基点执行显式 rebase，只重放本次数据提交，随后最多重试推送一次。该流程不依赖完整历史或共同祖先；同一文件发生冲突时会失败退出，不强制覆盖远端。同步仍使用原有串行执行设置。
+`MONITOR_REPOSITORY`、`MONITOR_BRANCH` 和 `ALLOWED_ORIGIN` 已写在 `worker/wrangler.toml`。部署后，把 Worker 的 `/stars` 地址填入 Pages 仓库网页的 `CONFIG.starApiUrl`。首次操作星标时，在页面输入 `STAR_API_KEY`；密钥仅保留在当前标签页会话中。星标状态更新不会触发 Actions；要查询星标商品的新价格，仍需手动运行监控工作流。
 
-
-## 星标商品与价格变动邮件
-
-在价格面板选中商品后，可切换“重点关注”星标。星标状态保存于
-`data/starred_products.json`。星标商品首次成功采样只建立价格基线；之后每次采样与上次价格不同时，
-无论涨价还是降价，都会发送一封邮件。价格相同不发邮件。取消星标后，该商品恢复为 `condition`
-阈值提醒。
-
-网页是静态 GitHub Pages，不能安全地直接写入仓库。星标由 `worker/` 中的 Cloudflare Worker API 保存。可全程在浏览器中通过 Workers Builds 部署：
-
-1. 在 Cloudflare 控制台打开 **Workers & Pages → Create application → GitHub**，连接本仓库并选择 `main`。
-2. 项目名称使用 `bilibili-goods-star-api`，Root directory 设为 `worker`；Build command 留空，Deploy command 保持默认。
-3. 部署后在 Worker 的 **Settings → Variables and Secrets** 添加两个 Secret：
-   - `GITHUB_TOKEN`：Fine-grained PAT，仅授权本仓库 `Contents: Read and write`，用于读取和保存星标状态。
-   - `STAR_API_KEY`：独立随机密钥，不要复用 GitHub Token；请用密码管理器保存，Cloudflare 不会再次显示 Secret 值。
-4. `MONITOR_REPOSITORY`、`MONITOR_BRANCH` 和 `ALLOWED_ORIGIN` 已在 `worker/wrangler.toml` 配置。不要把密钥写入仓库。
-5. 复制 Worker 的 `workers.dev` 地址，在网页仓库中编辑 `personal_documents/Bilibili_Goods_Price_Monitor/index.html`，把 `CONFIG.starApiUrl` 设为该地址加上 `/stars`，然后从 GitHub 网页提交修改。
-6. 网页首次切换星标时输入 `STAR_API_KEY`。页面只在当前标签页会话保留它。
-
-Worker 只更新本仓库的星标 JSON，不会触发 GitHub Actions。没有定时检查；要检测星标商品后续的价格变化，需从 GitHub Actions 手动运行监控工作流。
